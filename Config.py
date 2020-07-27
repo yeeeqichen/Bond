@@ -16,10 +16,12 @@ class Config:
         self.top_k = 10
         self.embed_file_full = self.folder_path + '/name_embeddings.json'
         self.embed_file_short = self.folder_path + '/short_embeddings.json'
+        self.labeled_text = self.folder_path + '/labeled_text.txt'
         self.name_file = self.folder_path + '/names.txt'
         self.names = []
         self.full_embeddings = []
         self.short_embeddings = []
+        self.thresh_hold = 0.95
 
 
 config = Config()
