@@ -1,6 +1,14 @@
-from Config import embed
 from sys import argv
 import json
+import tensorflow as tf
+import tensorflow_hub as hub
+import tensorflow_text
+import os
+
+# 加载use模型
+os.environ["TFHUB_CACHE_DIR"] = "//data/IE/windeye_data/tfhub_cache"
+module_url = "https://hub.tensorflow.google.cn/google/universal-sentence-encoder-multilingual/3"
+embed = hub.load(module_url)
 
 folder_path = argv[1]
 mode = argv[2]

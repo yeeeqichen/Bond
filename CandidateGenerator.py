@@ -4,25 +4,17 @@ from Config import config
 
 
 # 返回候选集，若相似度大于一定阈值，直接给出链接结果
-class CandidateGenerator:
-    def __init__(self, full_embeddings, short_embeddings, top_k):
-        self.full_embeddings = full_embeddings
-        self.short_embeddings = short_embeddings
-        self.top_k = top_k
-
-    def get_candidates(self, mention_embedding, is_short):
-        if not is_short:
-            sim_matrix = cosine_similarity(mention_embedding, self.full_embeddings)
-        else:
-            sim_matrix = cosine_similarity(mention_embedding, self.short_embeddings)
-        top_n_idx = np.argpartition(sim_matrix[0], -self.top_k)[-self.top_k:]
-        best_score = sim_matrix[0][top_n_idx[-1]]
-        if best_score >= config.thresh_hold:
-            return top_n_idx, top_n_idx[-1]
-        return top_n_idx, None
-
-
-candidate_generator = CandidateGenerator(config.full_embeddings, config.short_embeddings, config.top_k)
+def get_candidates(mention_embedding, kind_idx):
+    # 在对应债券种类集合中选取相似度top k
+    sim_matrix = cosine_similarity(mention_embedding, config.bond_clusters[kind_idx])
+    top_n = min(config.top_k, len(sim_matrix[0]))
+    temp_idx = np.argpartition(sim_matrix[0], -top_n)[-top_n:]
+    # 转化为债券名库(去除了英文债券)中的索引,原索引是在sim_matrix中的索引，即对应cluster内的索引
+    top_n = []
+    for idx in temp_idx:
+        top_n.append((config.cluster_to_id[kind_idx][idx], sim_matrix[0][idx]))
+    # 返回索引以及对应的相似度得分
+    return top_n
 
 
 
