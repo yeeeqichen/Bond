@@ -6,12 +6,19 @@ from Merge import merge_elements
 
 def get_mentions(_blocks):
     _mentions = []
+    _bond_kinds = []
     for block in _blocks:
         mention = ''
-        for ele in block['elements']:
+        flag = 0
+        for ele, kind in zip(block['elements'], block['tags']):
             mention += ele
+            if kind == '债券类型':
+                _bond_kinds.append(ele)
+                flag = 1
         _mentions.append(mention)
-    return _mentions
+        if flag == 0:
+            _bond_kinds.append('#')
+    return _mentions, _bond_kinds
 
 
 if __name__ == '__main__':
@@ -24,13 +31,17 @@ if __name__ == '__main__':
             tags.append(dic['tags'])
 
     for text, tags in zip(texts, tags):
-        blocks = merge_elements(text, tags)
-        mention_set = get_mentions(blocks)
-        candidates, predicts = entity_linker(text, mention_set)
+        print('*' * 20)
         print('text: ', text)
-        for mention, candidate, predict in zip(mention_set, candidates, predicts):
-            print('mention: ', mention)
-            print('predict: ', predict)
-            print('candidate: ', candidate)
+        blocks = merge_elements(text, tags)
+        mention_set, kind_set = get_mentions(blocks)
+        if len(mention_set) == 0:
+            print('no mention')
+        else:
+            candidates, predicts = entity_linker(text, mention_set, kind_set)
+            for mention, candidate, predict in zip(mention_set, candidates, predicts):
+                print('mention: ', mention)
+                print('predict: ', predict)
+                # print('candidate: ', candidate)
 
 

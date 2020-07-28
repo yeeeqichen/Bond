@@ -1,18 +1,20 @@
 from Config import config, embed
 from CandidateGenerator import get_candidates
 
+NIL = 'fail to link: bond kind not found in knowledge base!'
 
-def get_mention_kind(mention):
-    kind_idx = 0
-    for idx, kind in enumerate(config.bond_kind):
-        if kind in mention or kind == '#':
-            kind_idx = idx
-            break
-    return kind_idx
+
+# def get_mention_kind(mention):
+#     kind_idx = 0
+#     for idx, kind in enumerate(config.bond_kind):
+#         if kind in mention or kind == '#':
+#             kind_idx = idx
+#             break
+#     return kind_idx
 
 
 # todo:相似度不够高时，进行消岐(长尾，因为需要用到正文信息）
-def entity_linker(sentence, mentions):
+def entity_linker(sentence, mentions, kinds):
     '''
     :param sentence: mention所在句子
     :param mentions: 句子中的mention
@@ -22,8 +24,11 @@ def entity_linker(sentence, mentions):
     # 目前按照名称的相似度选择链接对象
     entity_set = []
     candidate_set = []
-    for mention in mentions:
-        kind_idx = get_mention_kind(mention)
+    for mention, kind in zip(mentions, kinds):
+        if kind in config.bond_kind:
+            kind_idx = config.bond_kind.index(kind)
+        else:
+            kind_idx = -1
         mention_embedding = embed(mention).numpy()
         # sentence_embedding = embed(sentence).numpy()
         # get candidates

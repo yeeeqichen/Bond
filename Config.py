@@ -10,6 +10,7 @@ module_url = "https://hub.tensorflow.google.cn/google/universal-sentence-encoder
 embed = hub.load(module_url)
 
 
+# todo:xx政府专项债券-xx政府专项债券，考虑将这种情况拆分成两个债券
 class Config:
     def __init__(self):
         self.folder_path = '/data/IE/yqc/bond'
@@ -19,10 +20,10 @@ class Config:
         self.labeled_text = self.folder_path + '/labeled_text.txt'
         self.name_file = self.folder_path + '/names.txt'
         self.bond_kind = ['人民币债券', '美元债券', '短期融资券', '超短期融资券', '债务融资工具', '中期票据', '大额存单', '集合票据',
-                          '项目收益票据', '资产支持商业票据', '资产支持票据', '同业存单', '金融债券', '定期债务', '资本补充债券',
-                          '资产支持收益凭证', '融资券', '一般债券', '专项债券', '国债', '建设债券', '央行票据', '中央银行票据',
-                          '政府债券', '置换债券', '公司债券', '资本债券', '企业债券', '项目收益债券', '私募债券', '私募债', '集合债券',
-                          '资产支持证券', 'PPN', 'ABN', 'MTN', 'CP', 'SCP', 'CD', 'PRN', '债券', '债', '#']
+                          '项目收益票据', '资产支持商业票据', '资产支持票据', '同业存单', '定期存款', '专项金融债券', '金融债券', '定期债务', '资本补充债券',
+                          '资产支持收益凭证', '融资券', '一般债券', '专项债券', '国债', '建设债券', '央行票据', '中央银行票据', '地方政府债券',
+                          '政府债券', '置换债券', '专项公司债券', '公司债券', '资本债券', '企业债券', '项目收益债券', '私募债券', '私募债', '集合债券',
+                          '资产支持证券', 'PPN', 'ABN', 'MTN', 'SCP', 'CP', 'CD', 'PRN', '专项债', '债券', '债', '#']
         self.names = []
         self.full_embeddings = []
         self.short_embeddings = []
