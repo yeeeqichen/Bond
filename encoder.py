@@ -20,17 +20,38 @@ if mode == 'full':
         for line in f:
             names.append(line.strip('\n').split(' ')[0])
     outfile = folder_path + '/name_embeddings.json'
+    full_to_id = []
+    with open(outfile, 'w') as f:
+        for cnt, name in enumerate(names):
+            if '政府' in name and '专项债券' in name and '-' in name:
+                name1, name2 = name.split('-')[:2]
+                name_embed = embed(name1).numpy().squeeze().tolist()
+                f.write(json.dumps(name_embed) + '\n')
+                full_to_id.append(cnt)
+                name_embed = embed(name2).numpy().squeeze().tolist()
+                f.write(json.dumps(name_embed) + '\n')
+                full_to_id.append(cnt)
+            else:
+                name_embed = embed(name).numpy().squeeze().tolist()
+                f.write(json.dumps(name_embed) + '\n')
+                full_to_id.append(cnt)
+            if cnt % 1000 == 0:
+                print(cnt)
+    with open(folder_path + '/full_to_id.json', 'w') as f:
+        f.write(json.dumps(full_to_id))
+
 elif mode == 'short':
     with open(file_path) as f:
         for line in f:
             names.append(line.strip('\n').split(' ')[1])
     outfile = folder_path + '/short_embeddings.json'
+    with open(outfile, 'w') as f:
+        for cnt, name in enumerate(names):
+            name_embed = embed(name).numpy().squeeze().tolist()
+            if cnt % 1000 == 0:
+                print(cnt)
+            f.write(json.dumps(name_embed) + '\n')
 else:
     raise Exception('Please clarify mode : full or short')
 
-with open(outfile, 'w') as f:
-    for cnt, name in enumerate(names):
-        name_embed = embed(name).numpy().squeeze().tolist()
-        if cnt % 1000 == 0:
-            print(cnt)
-        f.write(json.dumps(name_embed) + '\n')
+

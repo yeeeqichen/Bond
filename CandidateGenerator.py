@@ -12,7 +12,7 @@ def get_candidates(mention_embedding, kind_idx):
         top_n = []
         temp_idx = np.argpartition(sim_matrix[0], -top_k)[-top_k:]
         for idx in temp_idx:
-            top_n.append((idx, sim_matrix[0][idx]))
+            top_n.append((config.full_to_id[idx], sim_matrix[0][idx]))
     else:
         sim_matrix = cosine_similarity(mention_embedding, config.bond_clusters[kind_idx])
         top_k = min(config.top_k, len(sim_matrix[0]))

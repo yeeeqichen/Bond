@@ -19,40 +19,68 @@ class Config:
         self.embed_file_short = self.folder_path + '/short_embeddings.json'
         self.labeled_text = self.folder_path + '/labeled_text.txt'
         self.name_file = self.folder_path + '/names.txt'
+        self.full_to_id_file = self.folder_path + '/full_to_id.json'
         self.bond_kind = ['人民币债券', '美元债券', '短期融资券', '超短期融资券', '债务融资工具', '中期票据', '大额存单', '集合票据',
                           '项目收益票据', '资产支持商业票据', '资产支持票据', '同业存单', '定期存款', '专项金融债券', '金融债券', '定期债务', '资本补充债券',
                           '资产支持收益凭证', '融资券', '一般债券', '专项债券', '国债', '建设债券', '央行票据', '中央银行票据', '地方政府债券',
                           '政府债券', '置换债券', '专项公司债券', '公司债券', '资本债券', '企业债券', '项目收益债券', '私募债券', '私募债', '集合债券',
                           '资产支持证券', 'PPN', 'ABN', 'MTN', 'SCP', 'CP', 'CD', 'PRN', '专项债', '债券', '债', '#']
         self.names = []
+        self.short_names = []
+        self.full_names = []
         self.full_embeddings = []
         self.short_embeddings = []
         self.thresh_hold = 0.8
         self.bond_clusters = [[] for _ in range(len(self.bond_kind))]
         self.cluster_to_id = [[] for _ in range(len(self.bond_kind))]
+        self.full_to_id = []
 
     def clustering(self):
         print('clustering...')
-        for idx1, name in enumerate(self.names):
-            full, short = name.strip('\n').split(' ')
-            for idx2, kind in enumerate(self.bond_kind):
-                if kind in full or kind == '#':
-                    self.bond_clusters[idx2].append(self.full_embeddings[idx1])
-                    self.cluster_to_id[idx2].append(idx1)
-                    break
+        for idx1, short in enumerate(self.short_names):
             for idx2, kind in enumerate(self.bond_kind):
                 if kind in short or kind == '#':
                     self.bond_clusters[idx2].append(self.short_embeddings[idx1])
                     self.cluster_to_id[idx2].append(idx1)
                     break
+        for idx1, full in enumerate(self.full_names):
+            for idx2, kind in enumerate(self.bond_kind):
+                if kind in full or kind == '#':
+                    self.bond_clusters[idx2].append(self.full_embeddings[idx1])
+                    self.cluster_to_id[idx2].append(self.full_to_id[idx1])
+                    break
+        # for idx1, name in enumerate(self.names):
+        #     full, short = name.strip('\n').split(' ')
+        #     for idx2, kind in enumerate(self.bond_kind):
+        #         if kind in full or kind == '#':
+        #             self.bond_clusters[idx2].append(self.full_embeddings[idx1])
+        #             self.cluster_to_id[idx2].append(idx1)
+        #             break
+        #     for idx2, kind in enumerate(self.bond_kind):
+        #         if kind in short or kind == '#':
+        #             self.bond_clusters[idx2].append(self.short_embeddings[idx1])
+        #             self.cluster_to_id[idx2].append(idx1)
+        #             break
         print('done')
 
 
 config = Config()
 print('loading files...')
+with open(config.full_to_id_file) as f:
+    temp = json.loads(f.readline())
+    for i in temp:
+        config.full_to_id.append(i)
 with open(config.name_file) as f:
     for name in f:
         config.names.append(name)
+        full, short = name.strip('\n').split(' ')
+        config.short_names.append(short)
+        if '政府' in full and '专项债券' in full and '-' in full:
+            full1, full2 = full.split('-')[:2]
+            config.full_names.append(full1)
+            config.full_names.append(full2)
+        else:
+            config.full_names.append(full)
 with open(config.embed_file_full) as f:
     for line in f:
         config.full_embeddings.append(numpy.array(json.loads(line.strip('\n'))))
