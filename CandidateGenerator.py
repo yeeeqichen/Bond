@@ -1,3 +1,8 @@
+"""
+@description:
+    该文件对外提供get_candidates方法，用于生成每个mention的候选entity
+@author: yeeeqichen
+"""
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from Config import config
@@ -5,6 +10,11 @@ from Config import config
 
 # 返回候选集，若相似度大于一定阈值，直接给出链接结果
 def get_candidates(mention_embedding, kind_idx):
+    """
+    :param mention_embedding:每个mention的embedding
+    :param kind_idx: 每个mention的债券类型
+    :return: 候选的债券索引及其相似度得分
+    """
     # 在对应债券种类集合中选取相似度top k
     if kind_idx == -1 or len(config.bond_clusters[kind_idx]) == 0:
         sim_matrix = cosine_similarity(mention_embedding, config.full_embeddings)

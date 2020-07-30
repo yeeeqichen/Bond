@@ -1,3 +1,8 @@
+"""
+@description:
+    该文件对外提供merge_elements方法，用于将NER识别结果转换为对应债券
+@author: yeeeqichen
+"""
 import json
 
 digit = {'一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9}
@@ -49,6 +54,11 @@ def _reverse_trans(num):
 
 
 def merge_elements(text, tags):
+    """
+    :param text:文本
+    :param tags: NER识别的标签
+    :return: 文本中的债券，以{'elements':['11', '青岛', '债', '01'], 'tags':['年份', '发债主体','债券类型', '期数']}形式表现
+    """
     # 将形如 2015-2018年度 001-008期 第一期至第二十期 展开为多只债券
     def _decode_range():
         nonlocal blocks

@@ -1,25 +1,21 @@
+"""
+@description:
+    该文件对外提供entity_linker()方法，用于预测句子中的mention对应的entity
+@author: yeeeqichen
+"""
 from Config import config, embed
 from CandidateGenerator import get_candidates
 
 NIL = 'fail to link: bond kind not found in knowledge base!'
 
 
-# def get_mention_kind(mention):
-#     kind_idx = 0
-#     for idx, kind in enumerate(config.bond_kind):
-#         if kind in mention or kind == '#':
-#             kind_idx = idx
-#             break
-#     return kind_idx
-
-
 # todo:相似度不够高时，进行消岐(长尾，因为需要用到正文信息）
 def entity_linker(sentence, mentions, kinds):
-    '''
+    """
     :param sentence: mention所在句子
     :param mentions: 句子中的mention
     :return: 每个mention对应的entity
-    '''
+    """
 
     # 目前按照名称的相似度选择链接对象
     entity_set = []

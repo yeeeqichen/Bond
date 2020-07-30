@@ -5,6 +5,10 @@ from Merge import merge_elements
 
 
 def get_mentions(_blocks):
+    """
+    :param _blocks:每个block表示一只债券
+    :return: 每只债券的mention，及其对应的债券类型，如果没有则返回 #
+    """
     _mentions = []
     _bond_kinds = []
     for block in _blocks:

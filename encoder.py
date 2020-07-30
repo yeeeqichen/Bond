@@ -1,3 +1,8 @@
+"""
+@description:
+    该文件用于生成知识库中债券名的embedding，并存储到文件中
+@author: yeeeeqichen
+"""
 from sys import argv
 import json
 import tensorflow as tf

@@ -1,3 +1,9 @@
+"""
+@description:
+    该文件对外提供一个config对象和一个embed对象，embed对象是USE模型，用于获得债券名的embeddinng
+    config对象则定义项目所需的各种超参及数据
+@author yeeeqichen
+"""
 import numpy
 import json
 import tensorflow as tf
@@ -10,7 +16,6 @@ module_url = "https://hub.tensorflow.google.cn/google/universal-sentence-encoder
 embed = hub.load(module_url)
 
 
-# todo:xx政府专项债券-xx政府专项债券，考虑将这种情况拆分成两个债券
 class Config:
     def __init__(self):
         self.folder_path = '/data/IE/yqc/bond'
@@ -32,6 +37,7 @@ class Config:
         self.short_embeddings = []
         self.thresh_hold = 0.8
         self.bond_clusters = [[] for _ in range(len(self.bond_kind))]
+        # 这两个list存储到kb索引的映射关系
         self.cluster_to_id = [[] for _ in range(len(self.bond_kind))]
         self.full_to_id = []
 
@@ -49,22 +55,11 @@ class Config:
                     self.bond_clusters[idx2].append(self.full_embeddings[idx1])
                     self.cluster_to_id[idx2].append(self.full_to_id[idx1])
                     break
-        # for idx1, name in enumerate(self.names):
-        #     full, short = name.strip('\n').split(' ')
-        #     for idx2, kind in enumerate(self.bond_kind):
-        #         if kind in full or kind == '#':
-        #             self.bond_clusters[idx2].append(self.full_embeddings[idx1])
-        #             self.cluster_to_id[idx2].append(idx1)
-        #             break
-        #     for idx2, kind in enumerate(self.bond_kind):
-        #         if kind in short or kind == '#':
-        #             self.bond_clusters[idx2].append(self.short_embeddings[idx1])
-        #             self.cluster_to_id[idx2].append(idx1)
-        #             break
         print('done')
 
 
 config = Config()
+# 从文件中读取债券名库及其embedding
 print('loading files...')
 with open(config.full_to_id_file) as f:
     temp = json.loads(f.readline())
@@ -89,5 +84,3 @@ with open(config.embed_file_short) as f:
         config.short_embeddings.append(numpy.array(json.loads(line.strip('\n'))))
 print('done')
 config.clustering()
-# print(len(config.full_embeddings))
-# print(len(config.short_embeddings))
