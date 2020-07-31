@@ -144,7 +144,8 @@ def merge_elements(text, tags):
             # 特殊模式指的是目前元素属于多个债券，例如2018年第一期、第二期xxx
             if special_mode:
                 temp = queue[-1]
-                if (tag == '期数' and last_tag == '期数') or (tag == '年份' and last_tag == '年份'):
+                if (tag == '期数' and last_tag == '期数') or (tag == '年份' and last_tag == '年份') or \
+                        (tag == '发债方' and last_tag == '发债方'):
                     dic = dict()
                     dic['elements'] = []
                     dic['tags'] = []
@@ -169,8 +170,8 @@ def merge_elements(text, tags):
 
             # 正常模式，处理单个债券
             else:
-                # 如果要素不是修饰词并且要素已经在当前block中出现，我们认为这是一支新的债券（要素并列的情况后处理）
-                if (tag == '期数' and last_tag == '期数') or (tag == '年份' and last_tag == '年份'):
+                if (tag == '期数' and last_tag == '期数') or (tag == '年份' and last_tag == '年份') or \
+                        (tag == '发债方' and last_tag == '发债方'):
                     special_mode = True
                     queue.clear()
                     queue.append(block)
@@ -194,7 +195,7 @@ def merge_elements(text, tags):
                     block['elements'].append(ele)
                     block['tags'].append(tag)
 
-            # 记录上一轮的标签情况，目前逻辑是连续出现两个期数或年份呢则进入特殊模式，
+            # 记录上一轮的标签情况，目前逻辑是连续出现两个期数或年份或发债方呢则进入特殊模式（多只债券并列）
             last_tag = tag
         else:
             idx += 1
@@ -209,11 +210,11 @@ def merge_elements(text, tags):
 
 
 if __name__ == '__main__':
-    # path = '/Users/maac/Desktop/债券实体链接/hand_labeled.json'
-    # with open(path) as f:
-    #     for line in f:
-    #         dic = json.loads(line)
-    #         print(merge_elements(dic['text'], dic['tags']))
-    text = '19呵呵第一至十一期xxx债券'
-    tags = ['B-年份', 'I-年份', 'B-发债方', 'I-发债方', 'B-期数', 'I-期数','I-期数', 'I-期数', 'I-期数', 'I-期数', 'B-债券种类', 'I-债券种类', 'I-债券种类','I-债券种类','I-债券种类']
-    print(merge_elements(text, tags))
+    path = '/Users/maac/Desktop/债券实体链接/hand_labeled.json'
+    with open(path) as f:
+        for line in f:
+            dic = json.loads(line)
+            print(merge_elements(dic['text'], dic['tags']))
+    # text = '泰晶、辉丰转债'
+    # tags = ['B-发债方', 'I-发债方', 'O', 'B-发债方', 'I-发债方', 'B-债券种类','I-债券种类']
+    # print(merge_elements(text, tags))
