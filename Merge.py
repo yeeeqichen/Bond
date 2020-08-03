@@ -69,7 +69,8 @@ def merge_elements(text, tags):
             for idx2, t in enumerate(blocks[idx1]['tags']):
                 # 定位到具有年份或期数范围的债券
                 if (t == '年份' or t == '期数') and \
-                        ('-' in blocks[idx1]['elements'][idx2] or '至' in blocks[idx1]['elements'][idx2]):
+                        ('-' in blocks[idx1]['elements'][idx2] or '至' in blocks[idx1]['elements'][idx2]
+                         or '~' in blocks[idx1]['elements'][idx2]):
                     flag = 1
                     span = blocks[idx1]['elements'][idx2]
                     # 下面计算出各个元素的范围
@@ -85,6 +86,8 @@ def merge_elements(text, tags):
                     j = span.find('-')
                     if j == -1:
                         j = span.find('至')
+                        if j == -1:
+                            j = span.find('~')
                     i2 = j - 1
                     while span[i2] not in numbers:
                         i2 -= 1
@@ -149,7 +152,7 @@ def merge_elements(text, tags):
                 temp = queue[-1]
                 # 对应于三个及三个以上并列的情况
                 if (tag == '期数' and last_tag == '期数') or (tag == '年份' and last_tag == '年份') or \
-                        (tag == '发债方' and last_tag == '发债方'):
+                        (tag == '发债方' and last_tag == '发债方') or (tag == '债券类型' and last_tag == '债券类型'):
                     dic = dict()
                     dic['elements'] = []
                     dic['tags'] = []
@@ -178,7 +181,7 @@ def merge_elements(text, tags):
             else:
                 # 进入特殊模式
                 if (tag == '期数' and last_tag == '期数') or (tag == '年份' and last_tag == '年份') or \
-                        (tag == '发债方' and last_tag == '发债方'):
+                        (tag == '发债方' and last_tag == '发债方') or (tag == '债券类型' and last_tag == '债券类型'):
                     special_mode = True
                     queue.clear()
                     queue.append(block)
