@@ -2,8 +2,8 @@
 <project version="4">
   <component name="WebServers">
     <option name="servers">
-      <webServer id="b66f00b7-f363-4fd2-a617-7802f31a2cef" name="yqc">
-        <fileTransfer rootFolder="/home/IE/yqc" accessType="SFTP" host="192.168.1.80" port="22" sshConfigId="760b1c11-1b66-4bf9-8b53-8506f841b512" sshConfig="IE@192.168.1.80:22 password">
+      <webServer id="d937e4ef-7f8c-4b0f-a20e-23e37a3abbc9" name="矩池云">
+        <fileTransfer accessType="SFTP" host="hz-t2.matpool.com" port="27880" sshConfigId="20b5986f-866d-4c26-ba44-50e4ba6799fb" sshConfig="root@hz-t2.matpool.com:27880 password">
           <advancedOptions>
             <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
           </advancedOptions>

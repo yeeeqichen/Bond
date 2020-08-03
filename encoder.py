@@ -1,3 +1,4 @@
+# coding=UTF-8
 """
 @description:
     该文件用于生成知识库中债券名的embedding，并存储到文件中
@@ -28,6 +29,7 @@ if mode == 'full':
     full_to_id = []
     with open(outfile, 'w') as f:
         for cnt, name in enumerate(names):
+            # 对于用'-'连接两个名字的债券，将两部分分别进行encode，并记录其到知识库中的索引
             if '政府' in name and '专项债券' in name and '-' in name:
                 name1, name2 = name.split('-')[:2]
                 name_embed = embed(name1).numpy().squeeze().tolist()

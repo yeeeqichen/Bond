@@ -1,3 +1,4 @@
+# coding=UTF-8
 """
 @description:
     该文件对外提供merge_elements方法，用于将NER识别结果转换为对应债券
@@ -100,6 +101,7 @@ def merge_elements(text, tags):
                     begin = span[i1:i2 + 1]
                     end = span[k2:k1 + 1]
                     tail = span[k1 + 1:]
+                    # 原地修改为范围的起始处，剩余的用于构造新的债券名
                     blocks[idx1]['elements'][idx2] = head + begin + tail
                     # 若数字是中文格式，需要进行转换
                     if chinese:
@@ -116,6 +118,7 @@ def merge_elements(text, tags):
                         for e in blocks[idx1]['elements']:
                             temp['elements'].append(e)
                         temp['tags'] = blocks[idx1]['tags']
+                        # 根据需要转化为中文表示，例如第一期
                         if chinese:
                             temp['elements'][idx2] = head + _reverse_trans(y) + tail
                         else:
@@ -144,6 +147,7 @@ def merge_elements(text, tags):
             # 特殊模式指的是目前元素属于多个债券，例如2018年第一期、第二期xxx
             if special_mode:
                 temp = queue[-1]
+                # 对应于三个及三个以上并列的情况
                 if (tag == '期数' and last_tag == '期数') or (tag == '年份' and last_tag == '年份') or \
                         (tag == '发债方' and last_tag == '发债方'):
                     dic = dict()
@@ -155,6 +159,7 @@ def merge_elements(text, tags):
                     dic['elements'].append(ele)
                     dic['tags'].append(tag)
                     queue.append(dic)
+                # 新的债券名的开始
                 elif tag != '修饰语' and tag in temp['tags']:
                     special_mode = False
                     for b in queue:
@@ -163,6 +168,7 @@ def merge_elements(text, tags):
                     block = dict()
                     block['elements'] = [ele]
                     block['tags'] = [tag]
+                # 当前并列的债券所共同具有的要素
                 else:
                     for b in queue:
                         b['elements'].append(ele)
@@ -170,6 +176,7 @@ def merge_elements(text, tags):
 
             # 正常模式，处理单个债券
             else:
+                # 进入特殊模式
                 if (tag == '期数' and last_tag == '期数') or (tag == '年份' and last_tag == '年份') or \
                         (tag == '发债方' and last_tag == '发债方'):
                     special_mode = True
@@ -184,7 +191,7 @@ def merge_elements(text, tags):
                     dic['elements'].append(ele)
                     dic['tags'].append(tag)
                     queue.append(dic)
-
+                # 新的债券名的开始
                 elif tag != '修饰语' and tag in block['tags']:
                     blocks.append(block)
                     block = dict()
@@ -194,7 +201,6 @@ def merge_elements(text, tags):
                 else:
                     block['elements'].append(ele)
                     block['tags'].append(tag)
-
             # 记录上一轮的标签情况，目前逻辑是连续出现两个期数或年份或发债方呢则进入特殊模式（多只债券并列）
             last_tag = tag
         else:
@@ -210,11 +216,11 @@ def merge_elements(text, tags):
 
 
 if __name__ == '__main__':
-    path = '/Users/maac/Desktop/债券实体链接/hand_labeled.json'
-    with open(path) as f:
-        for line in f:
-            dic = json.loads(line)
-            print(merge_elements(dic['text'], dic['tags']))
-    # text = '泰晶、辉丰转债'
-    # tags = ['B-发债方', 'I-发债方', 'O', 'B-发债方', 'I-发债方', 'B-债券种类','I-债券种类']
-    # print(merge_elements(text, tags))
+    # path = '/Users/maac/Desktop/债券实体链接/hand_labeled.json'
+    # with open(path) as f:
+    #     for line in f:
+    #         dic = json.loads(line)
+    #         print(merge_elements(dic['text'], dic['tags']))
+    text = '泰晶、辉丰转债'
+    tags = ['B-发债方', 'I-发债方', 'O', 'B-发债方', 'I-发债方', 'B-债券种类','I-债券种类']
+    print(merge_elements(text, tags))

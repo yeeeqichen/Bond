@@ -1,3 +1,4 @@
+# coding=UTF-8
 from Config import config
 from EntityLinker import entity_linker
 import json

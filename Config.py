@@ -1,3 +1,4 @@
+# coding=UTF-8
 """
 @description:
     该文件对外提供一个config对象和一个embed对象，embed对象是USE模型，用于获得债券名的embeddinng

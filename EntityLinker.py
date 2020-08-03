@@ -1,3 +1,4 @@
+# coding=UTF-8
 """
 @description:
     该文件对外提供entity_linker()方法，用于预测句子中的mention对应的entity
