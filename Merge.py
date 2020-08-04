@@ -68,65 +68,82 @@ def merge_elements(text, tags):
             chinese = False
             for idx2, t in enumerate(blocks[idx1]['tags']):
                 # 定位到具有年份或期数范围的债券
-                if (t == '年份' or t == '期数') and \
-                        ('-' in blocks[idx1]['elements'][idx2] or '至' in blocks[idx1]['elements'][idx2]
-                         or '~' in blocks[idx1]['elements'][idx2]):
-                    flag = 1
-                    span = blocks[idx1]['elements'][idx2]
-                    # 下面计算出各个元素的范围
-                    # i1、i2表示前一个数字的范围
-                    i1 = 0
-                    while span[i1] not in numbers:
-                        i1 += 1
-                    if span[i1] not in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']:
-                        chinese = True
-                    if t == '年份' and chinese:
-                        break
-                    # j表示 两个数字的分割位置
-                    j = span.find('-')
-                    if j == -1:
-                        j = span.find('至')
+                if t == '年份' or t == '期数':
+                    if('-' in blocks[idx1]['elements'][idx2] or '至' in blocks[idx1]['elements'][idx2]
+                            or '~' in blocks[idx1]['elements'][idx2]):
+                        flag = 1
+                        span = blocks[idx1]['elements'][idx2]
+                        # 下面计算出各个元素的范围
+                        # i1、i2表示前一个数字的范围
+                        i1 = 0
+                        while span[i1] not in numbers:
+                            i1 += 1
+                        if span[i1] not in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']:
+                            chinese = True
+                        if t == '年份' and chinese:
+                            break
+                        # j表示 两个数字的分割位置
+                        j = span.find('-')
                         if j == -1:
-                            j = span.find('~')
-                    i2 = j - 1
-                    while span[i2] not in numbers:
-                        i2 -= 1
-                    # k2、k1表示后一个数字的范围
-                    k1 = len(span) - 1
-                    while span[k1] not in numbers:
-                        k1 -= 1
-                    k2 = j + 1
-                    while span[k2] not in numbers:
-                        k2 += 1
+                            j = span.find('至')
+                            if j == -1:
+                                j = span.find('~')
+                        i2 = j - 1
+                        while span[i2] not in numbers:
+                            i2 -= 1
+                        # k2、k1表示后一个数字的范围
+                        k1 = len(span) - 1
+                        while span[k1] not in numbers:
+                            k1 -= 1
+                        k2 = j + 1
+                        while span[k2] not in numbers:
+                            k2 += 1
 
-                    # head为前缀、begin为第一个数字、end为第二个数字、tail是后缀
-                    head = span[:i1]
-                    begin = span[i1:i2 + 1]
-                    end = span[k2:k1 + 1]
-                    tail = span[k1 + 1:]
-                    # 原地修改为范围的起始处，剩余的用于构造新的债券名
-                    blocks[idx1]['elements'][idx2] = head + begin + tail
-                    # 若数字是中文格式，需要进行转换
-                    if chinese:
-                        num1 = _trans(begin)
-                        num2 = _trans(end)
-                    else:
-                        num1 = int(begin)
-                        num2 = int(end)
-                    length = len(begin)
-                    # 将范围进行展开
-                    for y in range(num1 + 1, num2 + 1):
+                        # head为前缀、begin为第一个数字、end为第二个数字、tail是后缀
+                        head = span[:i1]
+                        begin = span[i1:i2 + 1]
+                        end = span[k2:k1 + 1]
+                        tail = span[k1 + 1:]
+                        # 原地修改为范围的起始处，剩余的用于构造新的债券名
+                        blocks[idx1]['elements'][idx2] = head + begin + tail
+                        # 若数字是中文格式，需要进行转换
+                        if chinese:
+                            num1 = _trans(begin)
+                            num2 = _trans(end)
+                        else:
+                            num1 = int(begin)
+                            num2 = int(end)
+                        length = len(begin)
+                        # 将范围进行展开
+                        for y in range(num1 + 1, num2 + 1):
+                            temp = dict()
+                            temp['elements'] = []
+                            for e in blocks[idx1]['elements']:
+                                temp['elements'].append(e)
+                            temp['tags'] = blocks[idx1]['tags']
+                            # 根据需要转化为中文表示，例如第一期
+                            if chinese:
+                                temp['elements'][idx2] = head + _reverse_trans(y) + tail
+                            else:
+                                temp['elements'][idx2] = head + str(y).zfill(length) + tail
+                            blocks.append(temp)
+                    # 处理第一期和第二期，第一期与第二期，2019年和2020年这样的情况
+                    elif '和' in blocks[idx1]['elements'][idx2] or '与' in blocks[idx1]['elements'][idx2]:
+                        span = blocks[idx1]['elements'][idx2]
+                        j = span.find('和')
+                        if j == -1:
+                            j = span.find('与')
+                        fir = span[:j]
+                        sec = span[j + 1:]
+                        blocks[idx1]['elements'][idx2] = fir
                         temp = dict()
                         temp['elements'] = []
+                        temp['tags'] = blocks[idx1]['tags']
                         for e in blocks[idx1]['elements']:
                             temp['elements'].append(e)
-                        temp['tags'] = blocks[idx1]['tags']
-                        # 根据需要转化为中文表示，例如第一期
-                        if chinese:
-                            temp['elements'][idx2] = head + _reverse_trans(y) + tail
-                        else:
-                            temp['elements'][idx2] = head + str(y).zfill(length) + tail
+                        temp['elements'][idx2] = sec
                         blocks.append(temp)
+
         return flag == 1
 
     idx = 0
@@ -224,6 +241,6 @@ if __name__ == '__main__':
     #     for line in f:
     #         dic = json.loads(line)
     #         print(merge_elements(dic['text'], dic['tags']))
-    text = '泰晶、辉丰转债'
-    tags = ['B-发债方', 'I-发债方', 'O', 'B-发债方', 'I-发债方', 'B-债券种类','I-债券种类']
+    text = '例如，2020年广东省新基建专项债券（一期和二期）募集资金专项用于广东省本级、茂名市、湛江市、清远市、汕头市、河源市和云浮市智慧产业、信息技术及科学研究等新基建项目；2020年粤港澳大湾区新基建专项债券（一期和二期）募集资金专项用于粤港澳大湾区广州市、佛山市、东莞市、惠州市、珠海市、江门市、中山市和肇庆市8个地市的新兴产业、科学研究等新基建项目。'
+    tags = ["O", "O", "O", "B-年份", "I-年份", "I-年份", "I-年份", "I-年份", "B-发债方", "I-发债方", "I-发债方", "B-修饰语", "I-修饰语", "I-修饰语", "B-债券类型", "I-债券类型", "I-债券类型", "I-债券类型", "B-期数", "I-期数", "I-期数", "I-期数", "I-期数", "I-期数", "I-期数", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "B-年份", "I-年份", "I-年份", "I-年份", "I-年份", "B-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "B-修饰语", "I-修饰语", "I-修饰语", "B-债券类型", "I-债券类型", "I-债券类型", "I-债券类型", "B-期数", "I-期数", "I-期数", "I-期数", "I-期数", "I-期数", "I-期数", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O"]
     print(merge_elements(text, tags))
