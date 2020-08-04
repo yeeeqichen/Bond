@@ -153,7 +153,7 @@ def merge_elements(text, tags):
     block['tags'] = []
     last_tag = ''
     special_mode = False
-    # 用于缓存目前并列的多只债券
+    # 用于缓存并列的多只债券
     queue = []
     while idx < len(tags):
         if 'B' in tags[idx]:
