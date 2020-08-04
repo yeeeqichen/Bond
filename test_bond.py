@@ -43,3 +43,4 @@ with open(path1) as f:
             print(full)
 print(cnt)
 # print(len(bonds))
+# lol
