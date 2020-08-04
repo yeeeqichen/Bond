@@ -2,7 +2,9 @@
 """
 @description:
     该文件实现entity_linker()方法，用于预测句子中的mention对应的entity
-    并封装了项目接口link（），接收文本和NER标签序列，返回mention以及其对应链接结果
+    并封装了项目接口link（），接收文本和NER标签序列，返回text中所有mention以及其对应链接结果
+    调用示例：for result in link(text, tags):
+                 print(result)
 @author: yeeeqichen
 """
 from Config import config, embed
