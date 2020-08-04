@@ -11,6 +11,7 @@ import tensorflow as tf
 import tensorflow_hub as hub
 import tensorflow_text
 import os
+import time
 # 加载use模型
 os.environ["TFHUB_CACHE_DIR"] = "//data/IE/windeye_data/tfhub_cache"
 module_url = "https://hub.tensorflow.google.cn/google/universal-sentence-encoder-multilingual/3"
@@ -44,6 +45,7 @@ class Config:
 
     def clustering(self):
         print('clustering...')
+        print('cur_time: ', time.ctime(time.time()))
         for idx1, short in enumerate(self.short_names):
             for idx2, kind in enumerate(self.bond_kind):
                 if kind in short or kind == '#':
@@ -57,11 +59,13 @@ class Config:
                     self.cluster_to_id[idx2].append(self.full_to_id[idx1])
                     break
         print('done')
+        print('cur_time: ', time.ctime(time.time()))
 
 
 config = Config()
 # 从文件中读取债券名库及其embedding
 print('loading files...')
+print('cur_time: ', time.ctime(time.time()))
 with open(config.full_to_id_file) as f:
     temp = json.loads(f.readline())
     for i in temp:
@@ -84,4 +88,5 @@ with open(config.embed_file_short) as f:
     for line in f:
         config.short_embeddings.append(numpy.array(json.loads(line.strip('\n'))))
 print('done')
+print('cur_time: ', time.ctime(time.time()))
 config.clustering()
