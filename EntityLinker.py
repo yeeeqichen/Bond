@@ -75,7 +75,8 @@ def link(text, tags):
     blocks = merge_elements(text, tags)
     mention_set, kind_set = get_mentions(blocks)
     if len(mention_set) == 0:
-        return 'no mention'
-    candidates, predicts = entity_linker(text, mention_set, kind_set)
-    for mention, _, predict in zip(mention_set, candidates, predicts):
-        yield {'mention': mention, 'predict': predict[:-1]}
+        yield 'no mention'
+    else:
+        candidates, predicts = entity_linker(text, mention_set, kind_set)
+        for mention, _, predict in zip(mention_set, candidates, predicts):
+            yield {'mention': mention, 'predict': predict[:-1]}

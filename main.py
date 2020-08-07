@@ -2,12 +2,18 @@
 from Config import config
 from EntityLinker import link
 import json
+from sys import argv
 
-
+mode = argv[1]
+num = argv[2]
 if __name__ == '__main__':
     texts = []
     tags = []
-    with open(config.labeled_text) as f:
+    if mode == 'test':
+        path = config.folder_path + '/samples{}.txt'.format(num)
+    else:
+        path = config.labeled_text
+    with open(path) as f:
         for line in f:
             dic = json.loads(line)
             texts.append(dic['text'])
