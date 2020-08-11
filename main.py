@@ -8,7 +8,7 @@ mode = argv[1]
 num = argv[2]
 
 
-# todo:正文部分（思路：将段落、句组合为一个str，使用目前逻辑测试一下)
+# todo:测试一下正文部分用当前逻辑链接效果如何
 if __name__ == '__main__':
     texts = []
     tags = []

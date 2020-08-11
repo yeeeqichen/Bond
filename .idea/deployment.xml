@@ -12,7 +12,7 @@
       <paths name="矩池云">
         <serverdata>
           <mappings>
-            <mapping deploy="/root" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/home/IE/yqc/bond" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>

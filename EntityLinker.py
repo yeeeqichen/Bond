@@ -28,8 +28,18 @@ def entity_linker(sentence, mentions, kinds, missing_element):
     candidate_set = []
     for mention, kind, is_miss in zip(mentions, kinds, missing_element):
         if is_miss:
+            entities = []
             # todo:补全要素后再进行链接
-            entity_set.append('要素缺失!')
+            # 目前思路：
+            # article_blocks, elements = process_article(article)
+            # if len(article_blocks) > 0: 正文中包含完整的债券名，那就直接用这个链接
+            #   mention_set, kind_set, _ = get_mentions(article_blocks)
+            #   for _mention, _kind in zip(mention_set, kind_set):
+            #        ...
+            #         entities.append(...)
+            # else:
+            #   补要素
+            entity_set.append(entities)
             candidate_set.append([])
             continue
         if kind in config.bond_kind:
@@ -37,16 +47,12 @@ def entity_linker(sentence, mentions, kinds, missing_element):
         else:
             kind_idx = -1
         mention_embedding = embed(mention).numpy()
-        # sentence_embedding = embed(sentence).numpy()
-        # get candidates
         top_n = get_candidates(mention_embedding, kind_idx)
-        # candidate_embeddings = []
         candidates = []
         for idx, sim in top_n:
-            # candidate_embeddings.append(config.full_embeddings[idx])
             candidates.append((config.names[idx], sim))
         candidates = sorted(candidates, key=lambda x: x[1], reverse=True)
-        entity_set.append(candidates[0][0])
+        entity_set.append(candidates[0][0][:-1])
         candidate_set.append(candidates)
     return candidate_set, entity_set
 
@@ -64,4 +70,4 @@ def link(text, tags):
     else:
         candidates, predicts = entity_linker(text, mention_set, kind_set, missing_element)
         for mention, _, predict in zip(mention_set, candidates, predicts):
-            yield {'mention': mention, 'predict': predict[:-1]}
+            yield {'mention': mention, 'predict': predict}

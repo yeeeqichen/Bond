@@ -46,7 +46,7 @@ def get_mentions(_blocks):
     for block in _blocks:
         mention = ''
         flag = 0
-        if '发债方' not in block['tags'] or '债券类型' not in ['tags']:
+        if '发债方' not in block['tags'] or ('年份' not in block['tags'] and '期数' not in block['tags']):
             _missing_element.append(True)
         else:
             _missing_element.append(False)
