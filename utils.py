@@ -1,14 +1,64 @@
-# coding=UTF-8
+#!/usr/bin/python3
+# encoding: utf-8
 """
-@description:
-    该文件对外提供merge_elements方法，用于将NER识别结果转换为对应债券
 @author: yeeeqichen
+@contact: 1700012775@pku.edu.cn
+@file: utils.py
+@time: 2020/8/11 5:16 下午
+@desc:
 """
-import json
 
 digit = {'一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9}
 numbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十']
 reverse_digit = ['#', '一', '二', '三', '四', '五', '六', '七', '八', '九']
+
+
+def process_articles(article):
+    tags = []
+    text = ""
+    for ele in article:
+        tags += ele['bond_arg']
+        text += ele['text']
+    temp_blocks = merge_elements(text, tags)
+    article_blocks = []
+    elements = dict()
+    elements['年份'] = set()
+    elements['发债方'] = set()
+    elements['修饰语'] = set()
+    elements['期数'] = set()
+    elements['债券类型'] = set()
+    for block in temp_blocks:
+        if '年份' in block['tags'] and '期数' in block['tags'] and '发债方' in block['tags']:
+            article_blocks.append(block)
+        for idx, tag in enumerate(block['tags']):
+            elements[tag].add(block['elements'][idx])
+    return article_blocks, elements
+
+
+def get_mentions(_blocks):
+    """
+    :param _blocks:每个block表示一只债券
+    :return: 每只债券的mention，及其对应的债券类型，如果没有则返回 #
+    """
+    _mentions = []
+    _bond_kinds = []
+    _missing_element = []
+    for block in _blocks:
+        mention = ''
+        flag = 0
+        if '发债方' not in block['tags'] or '债券类型' not in ['tags']:
+            _missing_element.append(True)
+        else:
+            _missing_element.append(False)
+        for ele, kind in zip(block['elements'], block['tags']):
+            mention += ele
+            if kind == '债券类型':
+                _bond_kinds.append(ele)
+                flag = 1
+        _mentions.append(mention)
+        if flag == 0:
+            _bond_kinds.append('#')
+    return _mentions, _bond_kinds, _missing_element
 
 
 # 将中文转数字
@@ -235,12 +285,13 @@ def merge_elements(text, tags):
     return blocks
 
 
-if __name__ == '__main__':
-    # path = '/Users/maac/Desktop/债券实体链接/hand_labeled.json'
-    # with open(path) as f:
-    #     for line in f:
-    #         dic = json.loads(line)
-    #         print(merge_elements(dic['text'], dic['tags']))
-    text = '例如，2020年广东省新基建专项债券（一期和二期）募集资金专项用于广东省本级、茂名市、湛江市、清远市、汕头市、河源市和云浮市智慧产业、信息技术及科学研究等新基建项目；2020年粤港澳大湾区新基建专项债券（一期和二期）募集资金专项用于粤港澳大湾区广州市、佛山市、东莞市、惠州市、珠海市、江门市、中山市和肇庆市8个地市的新兴产业、科学研究等新基建项目。'
-    tags = ["O", "O", "O", "B-年份", "I-年份", "I-年份", "I-年份", "I-年份", "B-发债方", "I-发债方", "I-发债方", "B-修饰语", "I-修饰语", "I-修饰语", "B-债券类型", "I-债券类型", "I-债券类型", "I-债券类型", "B-期数", "I-期数", "I-期数", "I-期数", "I-期数", "I-期数", "I-期数", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "B-年份", "I-年份", "I-年份", "I-年份", "I-年份", "B-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "B-修饰语", "I-修饰语", "I-修饰语", "B-债券类型", "I-债券类型", "I-债券类型", "I-债券类型", "B-期数", "I-期数", "I-期数", "I-期数", "I-期数", "I-期数", "I-期数", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O"]
-    print(merge_elements(text, tags))
+def add_elements_to_blocks(text, article, blocks):
+    # 获得正文的债券，只取不缺要素的，并获取正文中的要素集合，用于后续要素的补全
+    article_blocks, article_elements = process_articles(article)
+
+# article = [{"bond_arg": ["B-发债方", "I-发债方", "I-发债方", "I-发债方", "O", "O", "O", "O", "O", "B-债券类型", "I-债券类型", "I-债券类型", "I-债券类型", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O"], "paragraph": "title", "pos": "title", "text": "宝龙实业：10亿元公司债券票面利率确定为6.50%", "type": "text"}, {"bond_arg": ["O", "O", "O", "O", "O", "O", "O", "O"], "paragraph": 0, "pos": 0, "text": "来源：中国网地产", "type": "text"}, {"bond_arg": ["O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "B-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "B-年份", "I-年份", "I-年份", "I-年份", "I-年份", "B-修饰语", "I-修饰语", "I-修饰语", "I-修饰语", "B-修饰语", "I-修饰语", "I-修饰语", "I-修饰语", "B-债券类型", "I-债券类型", "I-债券类型", "I-债券类型", "I-债券类型", "I-债券类型", "B-期数", "I-期数", "I-期数", "I-期数", "I-期数", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O"], "paragraph": 1, "pos": 1, "text": "中国网地产讯 8月6日，据深交所消息，上海宝龙实业发展（集团）有限公司2020年公开发行住房租赁专项公司债券（第二期）票面利率确定为6.50%。", "type": "text"}, {"bond_arg": ["O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O"], "paragraph": 2, "pos": 2, "text": "消息显示，本期债券发行规模不超过10亿元（含），票面利率询价区间为5.0%-6.8%，发行期限为3年，附第2年末发行人调整票面利率选择权和投资者回售选择权。", "type": "text"}, {"bond_arg": ["O", "O", "O", "O", "B-年份", "I-年份", "B-发债方", "I-发债方", "B-期数", "I-期数", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O"], "paragraph": 2, "pos": 3, "text": "债券简称20宝龙04，债券代码149194。", "type": "text"}, {"bond_arg": ["O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O"], "paragraph": 3, "pos": 4, "text": "债券牵头主承销商、簿记管理人、债券受托管理人为中金公司，联席主承销商为中信证券。", "type": "text"}, {"bond_arg": ["O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O"], "paragraph": 3, "pos": 5, "text": "起息日为2020年8月7日。", "type": "text"}, {"bond_arg": ["O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O"], "paragraph": 4, "pos": 6, "text": "据悉，本期债券募集资金中70%拟用于公司住房租赁项目建设（包括置换前期的建安投入以及相关借款），剩余部分拟用于补充公司营运资金。", "type": "text"}]
+# print(process_articles(article))
+
+
+
+

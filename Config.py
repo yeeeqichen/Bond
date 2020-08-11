@@ -1,9 +1,11 @@
-# coding=UTF-8
+#!/usr/bin/python3
+# encoding: utf-8
 """
-@description:
-    该文件对外提供一个config对象和一个embed对象，embed对象是USE模型，用于获得债券名的embeddinng
-    config对象则定义项目所需的各种超参及数据
-@author yeeeqichen
+@author: yeeeqichen
+@contact: 1700012775@pku.edu.cn
+@file: Config.py
+@time: 2020/8/11 5:16 下午
+@desc:
 """
 import numpy
 import json

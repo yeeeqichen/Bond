@@ -1,8 +1,11 @@
-# coding=UTF-8
+#!/usr/bin/python3
+# encoding: utf-8
 """
-@description:
-    该文件用于生成知识库中债券名的embedding，并存储到文件中
-@author: yeeeeqichen
+@author: yeeeqichen
+@contact: 1700012775@pku.edu.cn
+@file: encoder.py
+@time: 2020/8/11 5:16 下午
+@desc:
 """
 from sys import argv
 import json

@@ -1,3 +1,12 @@
+#!/usr/bin/python3
+# encoding: utf-8
+"""
+@author: yeeeqichen
+@contact: 1700012775@pku.edu.cn
+@file: auto_label.py
+@time: 2020/8/11 5:16 下午
+@desc:
+"""
 import re
 from sys import argv
 import json

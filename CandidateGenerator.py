@@ -1,8 +1,11 @@
-# coding=UTF-8
+#!/usr/bin/python3
+# encoding: utf-8
 """
-@description:
-    该文件对外提供get_candidates方法，用于生成每个mention的候选entity
 @author: yeeeqichen
+@contact: 1700012775@pku.edu.cn
+@file: CandidateGenerator.py
+@time: 2020/8/11 5:16 下午
+@desc:
 """
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
@@ -37,4 +40,16 @@ def get_candidates(mention_embedding, kind_idx):
     return top_n
 
 
+# device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+# def _cosine_similarity(_mention, _cluster):
+#     _mention = np.array(_mention)
+#     _cluster = np.array(_cluster)
+#     _mention_tensor = torch.from_numpy(_mention).to(device)
+#     _mention_tensor_T = torch.from_numpy(_mention.T).to(device)
+#     _cluster_tensor = torch.from_numpy(_cluster).to(device)
+#     _cluster_tensor_T = torch.from_numpy(_cluster.T).to(device)
+#     mat1 = torch.matmul(_mention_tensor, _mention_tensor_T).cpu()
+#     mat2 = torch.matmul(_cluster_tensor, _cluster_tensor_T).cpu()
+#     mat3 = torch.matmul(_mention_tensor, _cluster_tensor_T).cpu()
+#     return mat3.numpy() / (np.sqrt(mat1.numpy()) * np.sqrt(np.diagonal(mat2.numpy())))
 
