@@ -7,26 +7,48 @@
 @time: 2020/8/11 5:16 下午
 @desc:
 """
-
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+from Config import config
 digit = {'一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9}
 numbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十']
 reverse_digit = ['#', '一', '二', '三', '四', '五', '六', '七', '八', '九']
 
 
-def process_articles(article):
-    tags = []
-    text = ""
-    for ele in article:
-        tags += ele['bond_arg']
-        text += ele['text']
-    temp_blocks = merge_elements(text, tags)
+def process_input(_input):
+    title = ''
+    article = []
+    title_tags = []
+    cur_para = 0
+    para = ''
+    para_tags = []
+    for obj in _input:
+        if obj['type'] != 'text':
+            continue
+        if obj['paragraph'] == 'title':
+            title += obj['text']
+            title_tags += obj['bond_arg']
+        else:
+            if int(obj['paragraph']) == cur_para:
+                para += obj['text']
+                para_tags += obj['bond_arg']
+            else:
+                article.append((para, para_tags))
+                cur_para = int(obj['paragraph'])
+                para = ''
+                para_tags = []
+                para += obj['text']
+                para_tags += obj['bond_arg']
+    if len(para) > 0:
+        article.append((para, para_tags))
+    return title, title_tags, article
+
+
+def process_articles(article, article_tags, elements):
+    if article is None:
+        return [], dict()
+    temp_blocks = merge_elements(article, article_tags)
     article_blocks = []
-    elements = dict()
-    elements['年份'] = set()
-    elements['发债方'] = set()
-    elements['修饰语'] = set()
-    elements['期数'] = set()
-    elements['债券类型'] = set()
     for block in temp_blocks:
         if '年份' in block['tags'] and '期数' in block['tags'] and '发债方' in block['tags']:
             article_blocks.append(block)
@@ -285,13 +307,44 @@ def merge_elements(text, tags):
     return blocks
 
 
-def add_elements_to_blocks(text, article, blocks):
-    # 获得正文的债券，只取不缺要素的，并获取正文中的要素集合，用于后续要素的补全
-    article_blocks, article_elements = process_articles(article)
+def get_candidates(mention_embedding, kind_idx):
+    """
+    :param mention_embedding:每个mention的embedding
+    :param kind_idx: 每个mention的债券类型
+    :return: 候选的债券索引及其相似度得分
+    """
+    # 在对应债券种类集合中选取相似度top k
+    if kind_idx == -1 or len(config.bond_clusters[kind_idx]) == 0:
+        sim_matrix = cosine_similarity(mention_embedding, config.full_embeddings)
+        top_k = min(config.top_k, len(sim_matrix[0]))
+        top_n = []
+        temp_idx = np.argpartition(sim_matrix[0], -top_k)[-top_k:]
+        # 转化为到债券名库（去除了英文债券）中的索引，原索引拆分了债券别名
+        for idx in temp_idx:
+            top_n.append((config.full_to_id[idx], sim_matrix[0][idx]))
+    else:
+        sim_matrix = cosine_similarity(mention_embedding, config.bond_clusters[kind_idx])
+        top_k = min(config.top_k, len(sim_matrix[0]))
+        temp_idx = np.argpartition(sim_matrix[0], -top_k)[-top_k:]
+        # 转化为债券名库(去除了英文债券)中的索引,原索引是cluster内的索引
+        top_n = []
+        for idx in temp_idx:
+            top_n.append((config.cluster_to_id[kind_idx][idx], sim_matrix[0][idx]))
+        # 返回索引以及对应的相似度得分
+    return top_n
 
-# article = [{"bond_arg": ["B-发债方", "I-发债方", "I-发债方", "I-发债方", "O", "O", "O", "O", "O", "B-债券类型", "I-债券类型", "I-债券类型", "I-债券类型", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O"], "paragraph": "title", "pos": "title", "text": "宝龙实业：10亿元公司债券票面利率确定为6.50%", "type": "text"}, {"bond_arg": ["O", "O", "O", "O", "O", "O", "O", "O"], "paragraph": 0, "pos": 0, "text": "来源：中国网地产", "type": "text"}, {"bond_arg": ["O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "B-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "I-发债方", "B-年份", "I-年份", "I-年份", "I-年份", "I-年份", "B-修饰语", "I-修饰语", "I-修饰语", "I-修饰语", "B-修饰语", "I-修饰语", "I-修饰语", "I-修饰语", "B-债券类型", "I-债券类型", "I-债券类型", "I-债券类型", "I-债券类型", "I-债券类型", "B-期数", "I-期数", "I-期数", "I-期数", "I-期数", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O"], "paragraph": 1, "pos": 1, "text": "中国网地产讯 8月6日，据深交所消息，上海宝龙实业发展（集团）有限公司2020年公开发行住房租赁专项公司债券（第二期）票面利率确定为6.50%。", "type": "text"}, {"bond_arg": ["O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O"], "paragraph": 2, "pos": 2, "text": "消息显示，本期债券发行规模不超过10亿元（含），票面利率询价区间为5.0%-6.8%，发行期限为3年，附第2年末发行人调整票面利率选择权和投资者回售选择权。", "type": "text"}, {"bond_arg": ["O", "O", "O", "O", "B-年份", "I-年份", "B-发债方", "I-发债方", "B-期数", "I-期数", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O"], "paragraph": 2, "pos": 3, "text": "债券简称20宝龙04，债券代码149194。", "type": "text"}, {"bond_arg": ["O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O"], "paragraph": 3, "pos": 4, "text": "债券牵头主承销商、簿记管理人、债券受托管理人为中金公司，联席主承销商为中信证券。", "type": "text"}, {"bond_arg": ["O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O"], "paragraph": 3, "pos": 5, "text": "起息日为2020年8月7日。", "type": "text"}, {"bond_arg": ["O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O"], "paragraph": 4, "pos": 6, "text": "据悉，本期债券募集资金中70%拟用于公司住房租赁项目建设（包括置换前期的建安投入以及相关借款），剩余部分拟用于补充公司营运资金。", "type": "text"}]
-# print(process_articles(article))
 
-
+# device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+# def _cosine_similarity(_mention, _cluster):
+#     _mention = np.array(_mention)
+#     _cluster = np.array(_cluster)
+#     _mention_tensor = torch.from_numpy(_mention).to(device)
+#     _mention_tensor_T = torch.from_numpy(_mention.T).to(device)
+#     _cluster_tensor = torch.from_numpy(_cluster).to(device)
+#     _cluster_tensor_T = torch.from_numpy(_cluster.T).to(device)
+#     mat1 = torch.matmul(_mention_tensor, _mention_tensor_T).cpu()
+#     mat2 = torch.matmul(_cluster_tensor, _cluster_tensor_T).cpu()
+#     mat3 = torch.matmul(_mention_tensor, _cluster_tensor_T).cpu()
+#     return mat3.numpy() / (np.sqrt(mat1.numpy()) * np.sqrt(np.diagonal(mat2.numpy())))
 
 
