@@ -67,14 +67,25 @@ def get_mentions(_blocks):
     _mentions = []
     _bond_kinds = []
     _missing_element = []
+    special_pattern = ['资产支持证券', '专项计划', '资产证券化']
     for block in _blocks:
         mention = ''
         flag = 0
         if '发债方' not in block['tags'] or '年份' not in block['tags'] or '期数' not in block['tags']:
             _missing_element.append(True)
+        elif '债券类型' in block['tags']:
+            _flag = 0
+            for pattern in special_pattern:
+                if pattern in block['elements'][block['tags'].index('债券类型')]:
+                    _flag = 1
+                    break
+            if _flag:
+                _missing_element.append(True)
+            else:
+                _missing_element.append(False)
         else:
             _missing_element.append(False)
-        assert(len(block['elements']) == len(block['tags']))
+        # assert(len(block['elements']) == len(block['tags']))
         for ele, kind in zip(block['elements'], block['tags']):
             mention += ele
             if kind == '债券类型':

@@ -77,9 +77,9 @@ def entity_linker(title, title_tags, article):
         scores = []
         if is_miss:
             # 使用正文提及的债券
-            # 有年有期的资产支持证券，但是缺优先级的暂时管不了
+            # 由于补年份和期数的目前只能处理单个债券，因此有多只债券的放在这里处理
             if len(bonds_in_article) > 0 and ('年份' not in title_block['tags'] or '期数' not in title_block['tags']) \
-                    and ('资产支持' not in title_kind or '资产证券化' not in title_kind):
+                    and '资产支持' not in title_kind and '资产证券化' not in title_kind and '专项计划' not in title_kind:
                 for bond in bonds_in_article:
                     flag = True
                     if '发债方' in title_block['tags'] and \
@@ -96,9 +96,13 @@ def entity_linker(title, title_tags, article):
                         flag = False
                     if flag:
                         linking_result.append(bond)
+                if len(linking_result) == 0:
+                    linking_result.append(NIL)
+                    candidates.append([])
+                    scores.append(0)
             # 补全要素
             else:
-                if '资产证券化' in title_mention or '资产支持' in title_mention:
+                if '资产证券化' in title_kind or '资产支持' in title_kind or '专项计划' in title_kind:
                     flag = False
                     pad = False
                     for ele, tag in zip(title_block['elements'], title_block['tags']):
@@ -126,6 +130,13 @@ def entity_linker(title, title_tags, article):
                             linking_result.append(predict)
                             candidates.append(_candi)
                             scores.append(score)
+                    else:
+                        _candi, predict, score = _predict(title_mention, title_kind)
+                        if score < config.thresh_hold:
+                            predict = NIL
+                        linking_result.append(predict)
+                        candidates.append(_candi)
+                        scores.append(score)
                 else:
                     pad_mention = title_mention
                     if '发债方' not in title_block['tags'] and len(article_elements['发债方']) > 0:
