@@ -19,13 +19,15 @@ def process_input(_input):
     title = ''
     article = []
     title_tags = []
-    cur_para = 0
+    cur_para = 2
     para = ''
     para_tags = []
     for obj in _input:
         if obj['type'] != 'text':
             continue
         if obj['paragraph'] == 'title':
+            continue
+        if int(obj['paragraph']) < 2:
             title += obj['text']
             title_tags += obj['bond_arg']
         else:
@@ -68,18 +70,26 @@ def get_mentions(_blocks):
     for block in _blocks:
         mention = ''
         flag = 0
-        if '发债方' not in block['tags'] or ('年份' not in block['tags'] and '期数' not in block['tags']):
+        if '发债方' not in block['tags'] or '年份' not in block['tags'] or '期数' not in block['tags']:
             _missing_element.append(True)
         else:
             _missing_element.append(False)
+        assert(len(block['elements']) == len(block['tags']))
         for ele, kind in zip(block['elements'], block['tags']):
             mention += ele
             if kind == '债券类型':
                 _bond_kinds.append(ele)
                 flag = 1
         _mentions.append(mention)
+        # 考虑到可能出现缩写里面将债券类型（字母）标错，这里抢救一下
         if flag == 0:
-            _bond_kinds.append('#')
+            for k in config.bond_kind:
+                if k in mention:
+                    _bond_kinds.append(k)
+                    flag = 1
+                    break
+            if flag == 0:
+                _bond_kinds.append('#')
     return _mentions, _bond_kinds, _missing_element
 
 
