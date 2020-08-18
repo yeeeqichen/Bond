@@ -9,15 +9,9 @@
 """
 import numpy
 import json
-import tensorflow as tf
-import tensorflow_hub as hub
-import tensorflow_text
 import os
 import time
 # 加载use模型
-os.environ["TFHUB_CACHE_DIR"] = "//data/IE/windeye_data/tfhub_cache"
-module_url = "https://hub.tensorflow.google.cn/google/universal-sentence-encoder-multilingual/3"
-embed = hub.load(module_url)
 
 
 class Config:
@@ -45,6 +39,8 @@ class Config:
         # 这两个list存储到kb索引的映射关系
         self.cluster_to_id = [[] for _ in range(len(self.bond_kind))]
         self.full_to_id = []
+        self.use_USE = False
+        print('use_USE: ', self.use_USE)
 
     def clustering(self):
         print('clustering...')
@@ -67,29 +63,53 @@ class Config:
 
 config = Config()
 # 从文件中读取债券名库及其embedding
-print('loading files...')
-print('cur_time: ', time.ctime(time.time()))
-with open(config.full_to_id_file) as f:
-    temp = json.loads(f.readline())
-    for i in temp:
-        config.full_to_id.append(i)
-with open(config.name_file) as f:
-    for name in f:
-        config.names.append(name)
-        full, short = name.strip('\n').split(' ')
-        config.short_names.append(short)
-        if '政府' in full and '专项债券' in full and '-' in full:
-            full1, full2 = full.split('-')[:2]
-            config.full_names.append(full1)
-            config.full_names.append(full2)
-        else:
+if config.use_USE:
+    import tensorflow as tf
+    import tensorflow_hub as hub
+    import tensorflow_text
+    os.environ["TFHUB_CACHE_DIR"] = "//data/IE/windeye_data/tfhub_cache"
+    module_url = "https://hub.tensorflow.google.cn/google/universal-sentence-encoder-multilingual/3"
+    embed = hub.load(module_url)
+    print('loading files...')
+    print('cur_time: ', time.ctime(time.time()))
+    with open(config.full_to_id_file) as f:
+        temp = json.loads(f.readline())
+        for i in temp:
+            config.full_to_id.append(i)
+    with open(config.name_file) as f:
+        for name in f:
+            config.names.append(name)
+            full, short = name.strip('\n').split(' ')
+            config.short_names.append(short)
+            if '政府' in full and '专项债券' in full and '-' in full:
+                full1, full2 = full.split('-')[:2]
+                config.full_names.append(full1)
+                config.full_names.append(full2)
+            else:
+                config.full_names.append(full)
+    with open(config.embed_file_full) as f:
+        for line in f:
+            config.full_embeddings.append(numpy.array(json.loads(line.strip('\n'))))
+    with open(config.embed_file_short) as f:
+        for line in f:
+            config.short_embeddings.append(numpy.array(json.loads(line.strip('\n'))))
+    print('done')
+    print('cur_time: ', time.ctime(time.time()))
+    config.clustering()
+else:
+    with open(config.name_file) as f:
+        for name in f:
+            config.names.append(name)
+            full, short = name.strip('\n').split(' ')
+            config.short_names.append(short)
             config.full_names.append(full)
-with open(config.embed_file_full) as f:
-    for line in f:
-        config.full_embeddings.append(numpy.array(json.loads(line.strip('\n'))))
-with open(config.embed_file_short) as f:
-    for line in f:
-        config.short_embeddings.append(numpy.array(json.loads(line.strip('\n'))))
-print('done')
-print('cur_time: ', time.ctime(time.time()))
-config.clustering()
+        for idx1, short in enumerate(config.short_names):
+            for idx2, kind in enumerate(config.bond_kind):
+                if kind in short or kind == '#':
+                    config.bond_clusters[idx2].append(short)
+                    config.cluster_to_id[idx2].append(idx1)
+        for idx1, full in enumerate(config.full_names):
+            for idx2, kind in enumerate(config.bond_kind):
+                if kind in full or kind == '#':
+                    config.bond_clusters[idx2].append(full)
+                    config.cluster_to_id[idx2].append(idx1)

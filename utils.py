@@ -154,6 +154,7 @@ def merge_elements(text, tags):
     :return: 文本中的债券，以{'elements':['11', '青岛', '债', '01'], 'tags':['年份', '发债主体','债券类型', '期数']}形式表现
     """
     # 将形如 2015-2018年度 001-008期 第一期至第二十期 展开为多只债券
+    # todo：是不是要将展开后的一组债券名与展开前做一下对应
     def _decode_range():
         nonlocal blocks
         flag = 0
