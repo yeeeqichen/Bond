@@ -11,6 +11,7 @@ import numpy
 import json
 import os
 import time
+from sklearn.neighbors import kd_tree
 # 加载use模型
 
 
@@ -27,7 +28,7 @@ class Config:
                           '项目收益票据', '资产支持商业票据', '资产支持票据', '同业存单', '定期存款', '专项金融债券', '金融债券', '定期债务', '资本补充债券',
                           '资产支持收益凭证', '融资券', '一般债券', '专项债券', '国债', '建设债券', '央行票据', '中央银行票据', '地方政府债券',
                           '政府债券', '置换债券', '专项公司债券', '公司债券', '资本债券', '企业债券', '项目收益债券', '私募债券', '私募债', '集合债券',
-                          '资产支持证券', 'PPN', 'ABN', 'MTN', 'SCP', 'CP', 'CD', 'PRN', '专项债', '转2', '债券', '转债', '#']
+                          '资产支持证券', 'PPN', 'ABN', 'MTN', 'SCP', 'CP', 'CD', 'PRN', '专项债', '转2', '债券', '转债', '债', '#']
         self.short_character = ['PPN', 'ABN', 'MTN', 'SCP', 'CP', 'CD', 'PRN']
         self.names = []
         self.short_names = []
@@ -39,7 +40,7 @@ class Config:
         # 这两个list存储到kb索引的映射关系
         self.cluster_to_id = [[] for _ in range(len(self.bond_kind))]
         self.full_to_id = []
-        self.use_USE = False
+        self.use_USE = True
         print('use_USE: ', self.use_USE)
 
     def clustering(self):

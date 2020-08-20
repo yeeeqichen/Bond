@@ -46,6 +46,7 @@ def pad_element(block, article_elements, mention):
                 flag = True
                 break
         if not flag:
+            _buffer = []
             for ele in list(article_elements['修饰语']):
                 if '优先' in ele or '次' in ele:
                     pad = True
@@ -55,7 +56,12 @@ def pad_element(block, article_elements, mention):
                     if '资产支持证券' not in mention:
                         _block['tags'].append('债券类型')
                         _block['elements'].append('资产支持证券')
-                    results.append(_block)
+                    _cur = ''
+                    for e in _block['elements']:
+                        _cur += e
+                    if _cur not in _buffer:
+                        results.append(_block)
+                        _buffer.append(_cur)
             # 有可能正文中也没有优先级这一要素
             if not pad:
                 results.append(new_block)
@@ -65,6 +71,7 @@ def pad_element(block, article_elements, mention):
         results.append(new_block)
     return results
 
+
 # 目前实现的效果：不缺要素直接链接，缺要素的话就到正文里找有没有不缺要素的，找到就用这些链接，没找到就用正文中的要素进行补全
 def entity_linker_with_use(title, title_tags, article):
     """
@@ -73,8 +80,9 @@ def entity_linker_with_use(title, title_tags, article):
     :param title_tags: 标题NER标注序列
     :return: text中的mention以及其对应的链接结果
     """
+    from Config import embed
+
     def _predict(_m, _k):
-        from Config import embed
         _candidates = []
         if _k in config.bond_kind:
             _kind_idx = config.bond_kind.index(_k)
@@ -116,13 +124,13 @@ def entity_linker_with_use(title, title_tags, article):
     assert (len(article_mentions) == len(article_kinds))
     for article_mention, article_kind in zip(article_mentions, article_kinds):
         _candi, predict, score = _predict(article_mention, article_kind)
-        if score < config.thresh_hold:
-            predict = NIL
+        # if score < config.thresh_hold:
+        #     predict = NIL
         article_candidate_set.append(_candi)
         article_entity_set.append(predict)
         article_scores.append(score)
     bonds_in_article = list(set(article_entity_set))
-
+    bonds_in_article.sort(key=article_entity_set.index)
     for title_mention, title_kind, is_miss, title_block in \
             zip(title_mentions, title_kinds, title_missing, title_blocks):
         linking_result = []
@@ -161,15 +169,15 @@ def entity_linker_with_use(title, title_tags, article):
                     for ele in block['elements']:
                         pad_mention += ele
                     _candi, predict, score = _predict(pad_mention, title_kind)
-                    if score < config.thresh_hold:
-                        predict = NIL
+                    # if score < config.thresh_hold:
+                    #     predict = NIL
                     linking_result.append(predict)
                     candidates.append(_candi)
                     scores.append(score)
         else:
             _candi, predict, score = _predict(title_mention, title_kind)
-            if score < config.thresh_hold:
-                predict = NIL
+            # if score < config.thresh_hold:
+            #     predict = NIL
             linking_result.append(predict)
             candidates.append(_candi)
             scores.append(score)
@@ -181,12 +189,14 @@ def entity_linker_with_use(title, title_tags, article):
 
 
 def entity_linker_with_elements(title, title_tags, article):
-    def _predict(block):
+    def _predict(_block):
         company = None
         kind = None
         year = None
         num = None
-        for ele, tag in zip(block['elements'], block['tags']):
+        _mention = ''
+        for ele, tag in zip(_block['elements'], _block['tags']):
+            _mention += ele
             if tag == '发债方':
                 company = ele
             elif tag == '债券类型':
@@ -205,7 +215,7 @@ def entity_linker_with_elements(title, title_tags, article):
         # print(kind, company, year, num)
         temp_candidates = []
         if kind is not None and kind not in config.bond_kind:
-            _candidates = []
+            _candidates = config.bond_clusters[config.bond_kind.index('#')]
         else:
             if kind is None:
                 _candidates = config.bond_clusters[config.bond_kind.index('#')]
@@ -231,9 +241,15 @@ def entity_linker_with_elements(title, title_tags, article):
             temp_candidates = []
     # 目前按照名称的相似度选择链接对象
         if len(_candidates) == 0:
-            return NIL
+            return NIL, _mention
         else:
-            return _candidates[0]
+            diff = 1e10
+            _pre = None
+            for _candi in _candidates:
+                if abs(len(_mention) - len(_candi)) < diff:
+                    _pre = _candi
+                    diff = abs(len(_mention) - len(_candi))
+            return _pre, _mention
 
     title_entity_set = []
     title_candidate_set = []
@@ -266,11 +282,12 @@ def entity_linker_with_elements(title, title_tags, article):
         if is_miss:
             pad_blocks = pad_element(title_block, article_elements, title_mention)
             for block in pad_blocks:
-                linking_result.append(_predict(block))
+                predict, pad_mention = _predict(block)
+                linking_result.append(predict)
                 scores.append(0)
                 candidates.append([])
         else:
-            linking_result.append(_predict(title_block))
+            linking_result.append(_predict(title_block)[0])
             candidates.append([])
             scores.append(0)
         title_entity_set.append(linking_result)
@@ -298,12 +315,12 @@ def link(_input):
         dic = dict()
         dic['mention'] = mention
         dic['entity'] = entity
-        dic['score'] = score
+        # dic['score'] = score
         title_result.append(dic)
     for mention, entity, score in zip(article_mentions, article_entities, article_scores):
         dic = dict()
         dic['mention'] = mention
         dic['entity'] = entity
-        dic['score'] = score
+        # dic['score'] = score
         article_result.append(dic)
     return title_result, article_result, title, article

@@ -250,7 +250,7 @@ def merge_elements(text, tags):
     # 用于缓存并列的多只债券
     queue = []
     while idx < len(tags):
-        if 'B' in tags[idx]:
+        if 'B' in tags[idx] or 'S' in tags[idx]:
             # 抽取出元素标签和元素的值
             tag = tags[idx][2:]
             ele = text[idx]
