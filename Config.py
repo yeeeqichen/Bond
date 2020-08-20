@@ -11,7 +11,7 @@ import numpy
 import json
 import os
 import time
-from sklearn.neighbors import kd_tree
+from sklearn.neighbors import BallTree
 # 加载use模型
 
 
@@ -25,7 +25,7 @@ class Config:
         self.name_file = self.folder_path + '/names.txt'
         self.full_to_id_file = self.folder_path + '/full_to_id.json'
         self.bond_kind = ['人民币债券', '美元债券', '超短期融资券', '短期融资券', '债务融资工具', '中期票据', '大额存单', '集合票据',
-                          '项目收益票据', '资产支持商业票据', '资产支持票据', '同业存单', '定期存款', '专项金融债券', '金融债券', '定期债务', '资本补充债券',
+                          '项目收益票据', '资产支持商业票据', '资产支持票据', '资产支持专项计划', '资产证券化', '同业存单', '定期存款', '专项金融债券', '金融债券', '定期债务', '资本补充债券',
                           '资产支持收益凭证', '融资券', '一般债券', '专项债券', '国债', '建设债券', '央行票据', '中央银行票据', '地方政府债券',
                           '政府债券', '置换债券', '专项公司债券', '公司债券', '资本债券', '企业债券', '项目收益债券', '私募债券', '私募债', '集合债券',
                           '资产支持证券', 'PPN', 'ABN', 'MTN', 'SCP', 'CP', 'CD', 'PRN', '专项债', '转2', '债券', '转债', '债', '#']
@@ -37,6 +37,8 @@ class Config:
         self.short_embeddings = []
         self.thresh_hold = 0.72
         self.bond_clusters = [[] for _ in range(len(self.bond_kind))]
+        self.neighbor_in_cluster = []
+        self.total_neighbor = None
         # 这两个list存储到kb索引的映射关系
         self.cluster_to_id = [[] for _ in range(len(self.bond_kind))]
         self.full_to_id = []
@@ -58,6 +60,13 @@ class Config:
                     self.bond_clusters[idx2].append(self.full_embeddings[idx1])
                     self.cluster_to_id[idx2].append(self.full_to_id[idx1])
                     break
+        for cluster in self.bond_clusters:
+            if len(cluster) == 0:
+                self.lsh_in_cluster.append(None)
+                continue
+            # self.lsh_in_cluster.append(LSHForest(random_state=123).fit(numpy.array(cluster)))
+            self.neighbor_in_cluster.append(BallTree(numpy.array(cluster)))
+        self.total_neighbor = BallTree(numpy.array(self.full_embeddings))
         print('done')
         print('cur_time: ', time.ctime(time.time()))
 
@@ -90,10 +99,10 @@ if config.use_USE:
                 config.full_names.append(full)
     with open(config.embed_file_full) as f:
         for line in f:
-            config.full_embeddings.append(numpy.array(json.loads(line.strip('\n'))))
+            config.full_embeddings.append(json.loads(line.strip('\n')))
     with open(config.embed_file_short) as f:
         for line in f:
-            config.short_embeddings.append(numpy.array(json.loads(line.strip('\n'))))
+            config.short_embeddings.append(json.loads(line.strip('\n')))
     print('done')
     print('cur_time: ', time.ctime(time.time()))
     config.clustering()

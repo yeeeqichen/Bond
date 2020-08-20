@@ -93,11 +93,24 @@ def entity_linker_with_use(title, title_tags, article):
                     _kind_idx = config.bond_kind.index(char)
                     break
         _mention_embed = embed(_m).numpy()
-        _top_n = get_candidates(_mention_embed, _kind_idx)
-        for idx, sim in _top_n:
-            _candidates.append((config.names[idx], sim))
-        _candidates = sorted(_candidates, key=lambda x: x[1], reverse=True)
-        return _candidates, _candidates[0][0][:-1], _candidates[0][1]
+        if _kind_idx == -1:
+            neighbor_finder = config.total_neighbor
+        else:
+            neighbor_finder = config.neighbor_in_cluster[_kind_idx]
+        # distance, idx = config.neighbor_in_cluster[_kind_idx].kneighbors(_mention_embed, n_neighbors=1)
+        distance, idx = neighbor_finder.query(_mention_embed, k=10)
+        k_neighbors = []
+        for i in idx[0]:
+            if _kind_idx == -1:
+                k_neighbors.append(config.full_embeddings[i])
+            else:
+        return [], config.names[config.cluster_to_id[_kind_idx][idx[0][0]]][:-1], distance
+
+        # _top_n = get_candidates(_mention_embed, _kind_idx)
+        # for idx, sim in _top_n:
+        #     _candidates.append((config.names[idx], sim))
+        # _candidates = sorted(_candidates, key=lambda x: x[1], reverse=True)
+        # return _candidates, _candidates[0][0][:-1], _candidates[0][1]
     # 目前按照名称的相似度选择链接对象
 
     title_entity_set = []
