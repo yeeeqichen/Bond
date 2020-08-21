@@ -12,11 +12,13 @@ import json
 from Config import config
 import os
 import random
+import time
 from sys import argv
 
 mode = argv[1]
 num = argv[2]
 if mode == 'test':
+    begin_time = time.time()
     with open('test_samples{}.txt'.format(num)) as f:
         samples = json.loads(f.read())
     results = []
@@ -37,32 +39,6 @@ if mode == 'test':
             print('oracle:', oracle)
             print('predict:', title_result)
             continue
-            # if len(oracle) == 0:
-            #     for r in title_result:
-            #         total += len(r['entity'])
-            # elif len(title_result) == 0:
-            #     for r in oracle:
-            #         total += len(r['entity'])
-            # else:
-            #     if len(oracle) > len(title_result):
-            #         for r in oracle[len(title_result):]:
-            #             total += len(r['entity'])
-            #     else:
-            #         for r in title_result[len(oracle):]:
-            #             total += len(r['entity'])
-            #     for pre, gold in zip(title_result, oracle):
-            #         for entity1, entity2 in zip(pre['entity'], gold['entity']):
-            #             total += 1
-            #             if config.use_USE:
-            #                 full1, short1 = entity1.split(' ')
-            #                 full2, short2 = entity2.split(' ')
-            #                 if full1 == full2 or short1 == short2:
-            #                     hit += 1
-            #             else:
-            #                 if entity1 in entity2:
-            #                     hit += 1
-            #         if len(pre['entity']) != len(gold['entity']):
-            #             total += abs(len(pre['entity']) - len(gold['entity']))
         correct = True
         for pre, gold in zip(title_result, oracle):
             for entity1, entity2 in zip(pre['entity'], gold['entity']):
@@ -78,15 +54,14 @@ if mode == 'test':
                         hit += 1
                     else:
                         correct = False
-            # if len(pre['entity']) != len(gold['entity']):
-            #     total += abs(len(pre['entity']) - len(gold['entity']))
         if not correct:
             print(title)
             print('oracle:', oracle)
             print('predict:', title_result)
         else:
             hit += 1
-
+    end_time = time.time()
+    print('total time cost: ', end_time - begin_time)
     print(len(samples))
     print(hit)
     print(hit / len(samples))

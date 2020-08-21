@@ -62,7 +62,7 @@ class Config:
                     break
         for cluster in self.bond_clusters:
             if len(cluster) == 0:
-                self.lsh_in_cluster.append(None)
+                self.neighbor_in_cluster.append(None)
                 continue
             # self.lsh_in_cluster.append(LSHForest(random_state=123).fit(numpy.array(cluster)))
             self.neighbor_in_cluster.append(BallTree(numpy.array(cluster)))

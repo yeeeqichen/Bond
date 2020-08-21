@@ -9,6 +9,7 @@
 """
 from Config import config
 from utils import merge_elements, get_mentions, process_articles, process_input, get_candidates
+from sklearn.metrics.pairwise import cosine_similarity
 
 NIL = 'Fail to link: Bond not found in knowledge base!'
 
@@ -93,19 +94,17 @@ def entity_linker_with_use(title, title_tags, article):
                     _kind_idx = config.bond_kind.index(char)
                     break
         _mention_embed = embed(_m).numpy()
+        # 使用聚类方法优化近邻查找
         if _kind_idx == -1:
             neighbor_finder = config.total_neighbor
         else:
             neighbor_finder = config.neighbor_in_cluster[_kind_idx]
         # distance, idx = config.neighbor_in_cluster[_kind_idx].kneighbors(_mention_embed, n_neighbors=1)
-        distance, idx = neighbor_finder.query(_mention_embed, k=10)
-        k_neighbors = []
-        for i in idx[0]:
-            if _kind_idx == -1:
-                k_neighbors.append(config.full_embeddings[i])
-            else:
-        return [], config.names[config.cluster_to_id[_kind_idx][idx[0][0]]][:-1], distance
-
+        distance, idx = neighbor_finder.query(_mention_embed, k=1)
+        if _kind_idx == -1:
+            return [], config.names[config.full_to_id[idx[0][0]]][:-1], 0.123456
+        return [], config.names[config.cluster_to_id[_kind_idx][idx[0][0]]][:-1], 0.234567
+        # 这是暴力方法，效率极低
         # _top_n = get_candidates(_mention_embed, _kind_idx)
         # for idx, sim in _top_n:
         #     _candidates.append((config.names[idx], sim))
