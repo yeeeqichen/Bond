@@ -11,7 +11,7 @@ import numpy
 import json
 import os
 import time
-from sklearn.neighbors import BallTree
+from sklearn.neighbors import BallTree, KDTree
 # 加载use模型
 
 
@@ -65,8 +65,8 @@ class Config:
                 self.neighbor_in_cluster.append(None)
                 continue
             # self.lsh_in_cluster.append(LSHForest(random_state=123).fit(numpy.array(cluster)))
-            self.neighbor_in_cluster.append(BallTree(numpy.array(cluster)))
-        self.total_neighbor = BallTree(numpy.array(self.full_embeddings))
+            self.neighbor_in_cluster.append(KDTree(numpy.array(cluster)))
+        self.total_neighbor = KDTree(numpy.array(self.full_embeddings))
         print('done')
         print('cur_time: ', time.ctime(time.time()))
 
