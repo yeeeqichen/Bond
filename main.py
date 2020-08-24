@@ -89,17 +89,17 @@ elif mode == 'train':
     print(len(samples))
     for file in samples:
         title_result, article_result, title, article = link(file)
-        print(title)
-        print(json.dumps(title_result, ensure_ascii=False))
-        print('')
-        # print('*' * 80)
         # print(title)
-        # print('title:')
-        # for r in title_result:
-        #     print(r)
-        # print('article:')
-        # for r in article_result:
-        #     print(r)
+        # print(json.dumps(title_result, ensure_ascii=False))
+        # print('')
+        print('*' * 80)
+        print(title)
+        print('title:')
+        for r in title_result:
+            print(r)
+        print('article:')
+        for r in article_result:
+            print(r)
 elif mode == 'dev':
     with open('/data/IE/yqc/bond/bond_arg_ner_res/AN201609020017473335.pdf.txt') as f:
         file = json.loads(f.read())

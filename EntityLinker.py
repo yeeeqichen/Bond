@@ -39,6 +39,11 @@ def pad_element(block, article_elements, mention):
         company = sorted(list(article_elements['发债方']), key=lambda x: len(x), reverse=True)[0]
         new_block['tags'].insert(0, '发债方')
         new_block['elements'].insert(0, company)
+    if '修饰语' not in block['tags'] and len(article_elements['修饰语']) > 0:
+        for dec in list(article_elements['修饰语']):
+            if '优' not in dec and '次' not in dec:
+                new_block['tags'].append('修饰语')
+                new_block['elements'].append(dec)
     if '资产证券化' in mention or '资产支持' in mention or '专项计划' in mention:
         flag = False
         pad = False
@@ -84,6 +89,22 @@ def entity_linker_with_use(title, title_tags, article):
     from Config import embed
 
     def _predict(_m, _k, _backup):
+        def _find_neighbor(_mention):
+            nonlocal _flag
+            nonlocal neighbor_finder
+            _embed = embed(_mention).numpy()
+            _distance, _idx = neighbor_finder.query(_embed, k=1)
+            if _flag:
+                new_embed = embed(_mention + '资产支持证券').numpy()
+                new_distance, new_idx = neighbor_finder.query(new_embed, k=1)
+                if new_distance < _distance:
+                    _distance = new_distance
+                    _idx = new_idx
+            return _distance, _idx
+
+        _flag = False
+        if '资产支持证券' in _m:
+            _flag = True
         _candidates = []
         if _k in config.bond_kind:
             _kind_idx = config.bond_kind.index(_k)
@@ -93,29 +114,20 @@ def entity_linker_with_use(title, title_tags, article):
                 if char in _m:
                     _kind_idx = config.bond_kind.index(char)
                     break
-        _mention_embed = embed(_m).numpy()
         # 使用聚类方法优化近邻查找
         if _kind_idx == -1:
             neighbor_finder = config.total_neighbor
         else:
             neighbor_finder = config.neighbor_in_cluster[_kind_idx]
-        # distance, idx = config.neighbor_in_cluster[_kind_idx].kneighbors(_mention_embed, n_neighbors=1)
-        distance, idx = neighbor_finder.query(_mention_embed, k=1)
+        distance, idx = _find_neighbor(_m)
         if _backup is not None:
-            backup_mention_embed = embed(_backup).numpy()
-            backup_distance, backup_idx = neighbor_finder.query(backup_mention_embed, k=1)
+            backup_distance, backup_idx = _find_neighbor(_backup)
             if backup_distance < distance:
                 distance = backup_distance
                 idx = backup_idx
         if _kind_idx == -1:
             return [], config.names[config.full_to_id[idx[0][0]]][:-1], distance
         return [], config.names[config.cluster_to_id[_kind_idx][idx[0][0]]][:-1], distance
-        # 这是暴力方法，效率极低
-        # _top_n = get_candidates(_mention_embed, _kind_idx)
-        # for idx, sim in _top_n:
-        #     _candidates.append((config.names[idx], sim))
-        # _candidates = sorted(_candidates, key=lambda x: x[1], reverse=True)
-        # return _candidates, _candidates[0][0][:-1], _candidates[0][1]
 
     def _get_backup(_block):
         _backup = None
@@ -155,8 +167,6 @@ def entity_linker_with_use(title, title_tags, article):
     assert (len(article_mentions) == len(article_kinds))
     for article_mention, article_kind, article_block in zip(article_mentions, article_kinds, article_blocks):
         _candi, predict, score = _predict(article_mention, article_kind, _get_backup(article_block))
-        # if score < config.thresh_hold:
-        #     predict = NIL
         article_candidate_set.append(_candi)
         article_entity_set.append(predict)
         article_scores.append(score)
@@ -199,16 +209,13 @@ def entity_linker_with_use(title, title_tags, article):
                     pad_mention = ''
                     for ele in block['elements']:
                         pad_mention += ele
+                    print('pad mention:', pad_mention)
                     _candi, predict, score = _predict(pad_mention, title_kind, _get_backup(block))
-                    # if score < config.thresh_hold:
-                    #     predict = NIL
                     linking_result.append(predict)
                     candidates.append(_candi)
                     scores.append(score)
         else:
             _candi, predict, score = _predict(title_mention, title_kind, _get_backup(title_block))
-            # if score < config.thresh_hold:
-            #     predict = NIL
             linking_result.append(predict)
             candidates.append(_candi)
             scores.append(score)
