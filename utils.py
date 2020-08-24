@@ -356,17 +356,3 @@ def get_candidates(mention_embedding, kind_idx):
     return top_n
 
 
-# device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-# def _cosine_similarity(_mention, _cluster):
-#     _mention = np.array(_mention)
-#     _cluster = np.array(_cluster)
-#     _mention_tensor = torch.from_numpy(_mention).to(device)
-#     _mention_tensor_T = torch.from_numpy(_mention.T).to(device)
-#     _cluster_tensor = torch.from_numpy(_cluster).to(device)
-#     _cluster_tensor_T = torch.from_numpy(_cluster.T).to(device)
-#     mat1 = torch.matmul(_mention_tensor, _mention_tensor_T).cpu()
-#     mat2 = torch.matmul(_cluster_tensor, _cluster_tensor_T).cpu()
-#     mat3 = torch.matmul(_mention_tensor, _cluster_tensor_T).cpu()
-#     return mat3.numpy() / (np.sqrt(mat1.numpy()) * np.sqrt(np.diagonal(mat2.numpy())))
-
-

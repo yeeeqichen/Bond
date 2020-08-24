@@ -83,7 +83,7 @@ def entity_linker_with_use(title, title_tags, article):
     """
     from Config import embed
 
-    def _predict(_m, _k):
+    def _predict(_m, _k, _backup):
         _candidates = []
         if _k in config.bond_kind:
             _kind_idx = config.bond_kind.index(_k)
@@ -101,15 +101,34 @@ def entity_linker_with_use(title, title_tags, article):
             neighbor_finder = config.neighbor_in_cluster[_kind_idx]
         # distance, idx = config.neighbor_in_cluster[_kind_idx].kneighbors(_mention_embed, n_neighbors=1)
         distance, idx = neighbor_finder.query(_mention_embed, k=1)
+        if _backup is not None:
+            backup_mention_embed = embed(_backup).numpy()
+            backup_distance, backup_idx = neighbor_finder.query(backup_mention_embed, k=1)
+            if backup_distance < distance:
+                distance = backup_distance
+                idx = backup_idx
         if _kind_idx == -1:
-            return [], config.names[config.full_to_id[idx[0][0]]][:-1], 0.123456
-        return [], config.names[config.cluster_to_id[_kind_idx][idx[0][0]]][:-1], 0.234567
+            return [], config.names[config.full_to_id[idx[0][0]]][:-1], distance
+        return [], config.names[config.cluster_to_id[_kind_idx][idx[0][0]]][:-1], distance
         # 这是暴力方法，效率极低
         # _top_n = get_candidates(_mention_embed, _kind_idx)
         # for idx, sim in _top_n:
         #     _candidates.append((config.names[idx], sim))
         # _candidates = sorted(_candidates, key=lambda x: x[1], reverse=True)
         # return _candidates, _candidates[0][0][:-1], _candidates[0][1]
+
+    def _get_backup(_block):
+        _backup = None
+        if '发债方' in _block['tags']:
+            idx = _block['tags'].index('发债方')
+            if _block['elements'][idx] in config.map_table:
+                _backup = ''
+                for i, ele in enumerate(_block['elements']):
+                    if i == idx:
+                        _backup += config.map_table[ele]
+                    else:
+                        _backup += ele
+        return _backup
     # 目前按照名称的相似度选择链接对象
 
     title_entity_set = []
@@ -134,8 +153,8 @@ def entity_linker_with_use(title, title_tags, article):
         article_blocks += _blocks
     article_mentions, article_kinds, _ = get_mentions(article_blocks)
     assert (len(article_mentions) == len(article_kinds))
-    for article_mention, article_kind in zip(article_mentions, article_kinds):
-        _candi, predict, score = _predict(article_mention, article_kind)
+    for article_mention, article_kind, article_block in zip(article_mentions, article_kinds, article_blocks):
+        _candi, predict, score = _predict(article_mention, article_kind, _get_backup(article_block))
         # if score < config.thresh_hold:
         #     predict = NIL
         article_candidate_set.append(_candi)
@@ -180,14 +199,14 @@ def entity_linker_with_use(title, title_tags, article):
                     pad_mention = ''
                     for ele in block['elements']:
                         pad_mention += ele
-                    _candi, predict, score = _predict(pad_mention, title_kind)
+                    _candi, predict, score = _predict(pad_mention, title_kind, _get_backup(block))
                     # if score < config.thresh_hold:
                     #     predict = NIL
                     linking_result.append(predict)
                     candidates.append(_candi)
                     scores.append(score)
         else:
-            _candi, predict, score = _predict(title_mention, title_kind)
+            _candi, predict, score = _predict(title_mention, title_kind, _get_backup(title_block))
             # if score < config.thresh_hold:
             #     predict = NIL
             linking_result.append(predict)
