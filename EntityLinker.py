@@ -254,7 +254,7 @@ def entity_linker_with_elements(title, title_tags, article):
     article_elements['期数'] = set()
     article_elements['债券类型'] = set()
     for para, para_tags in article:
-        _blocks, article_elements = process_articles(para, para_tags, article_elements)
+        _blocks, article_elements = process_paragraph(para, para_tags, article_elements)
         article_blocks += _blocks
     article_mentions, article_kinds, _ = get_mentions(article_blocks)
     assert (len(article_mentions) == len(article_kinds))
