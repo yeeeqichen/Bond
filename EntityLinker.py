@@ -8,77 +8,11 @@
 @desc:
 """
 from Config import config
-from utils import merge_elements, get_mentions, process_articles, process_input, get_candidates
-from sklearn.metrics.pairwise import cosine_similarity
+from utils import merge_elements, get_mentions, process_paragraph, process_input, pad_element
 
 NIL = 'Fail to link: Bond not found in knowledge base!'
 
 
-def pad_element(block, article_elements, mention):
-    results = []
-    new_block = dict(block)
-    # pad_mention = title_mention
-    if '期数' not in block['tags'] and len(article_elements['期数']) > 0:
-        num = ""
-        for _n in list(article_elements['期数']):
-            if '期' in _n:
-                num += _n
-                break
-        if len(num) > 0:
-            new_block['tags'].insert(0, '期数')
-            new_block['elements'].insert(0, num)
-    if '年份' not in block['tags'] and len(article_elements['年份']) > 0:
-        year = sorted(list(article_elements['年份']), key=lambda x: len(x))[0]
-        if len(year) < 4:
-            year = '20' + year
-        if '年' not in year:
-            year += '年'
-        new_block['tags'].insert(0, '年份')
-        new_block['elements'].insert(0, year)
-    if '发债方' not in block['tags'] and len(article_elements['发债方']) > 0:
-        company = sorted(list(article_elements['发债方']), key=lambda x: len(x), reverse=True)[0]
-        new_block['tags'].insert(0, '发债方')
-        new_block['elements'].insert(0, company)
-    if '修饰语' not in block['tags'] and len(article_elements['修饰语']) > 0:
-        for dec in list(article_elements['修饰语']):
-            if '优' not in dec and '次' not in dec:
-                new_block['tags'].append('修饰语')
-                new_block['elements'].append(dec)
-    if '资产证券化' in mention or '资产支持' in mention or '专项计划' in mention:
-        flag = False
-        pad = False
-        for ele, tag in zip(block['elements'], block['tags']):
-            if tag == '修饰语' and ('优' in ele or '次' in ele):
-                flag = True
-                break
-        if not flag:
-            _buffer = []
-            for ele in list(article_elements['修饰语']):
-                if '优先' in ele or '次' in ele:
-                    pad = True
-                    _block = dict(new_block)
-                    _block['tags'].append('修饰语')
-                    _block['elements'].append(ele)
-                    if '资产支持证券' not in mention:
-                        _block['tags'].append('债券类型')
-                        _block['elements'].append('资产支持证券')
-                    _cur = ''
-                    for e in _block['elements']:
-                        _cur += e
-                    if _cur not in _buffer:
-                        results.append(_block)
-                        _buffer.append(_cur)
-            # 有可能正文中也没有优先级这一要素
-            if not pad:
-                results.append(new_block)
-        else:
-            results.append(new_block)
-    else:
-        results.append(new_block)
-    return results
-
-
-# 目前实现的效果：不缺要素直接链接，缺要素的话就到正文里找有没有不缺要素的，找到就用这些链接，没找到就用正文中的要素进行补全
 def entity_linker_with_use(title, title_tags, article):
     """
     :param title: 标题
@@ -89,7 +23,17 @@ def entity_linker_with_use(title, title_tags, article):
     from Config import embed
 
     def _predict(_m, _k, _backup):
+        """
+        :param _m: 待预测的mention
+        :param _k: 待预测的债券类型
+        :param _backup: 使用映射表将简称转换为全称后的mention
+        :return: 候选， 链接结果，链接得分（距离）
+        """
         def _find_neighbor(_mention):
+            """
+            :param _mention: 用于寻找近邻的mention
+            :return: 近邻的距离，近邻的索引（债券名库中）
+            """
             nonlocal _flag
             nonlocal neighbor_finder
             _embed = embed(_mention).numpy()
@@ -114,7 +58,6 @@ def entity_linker_with_use(title, title_tags, article):
                 if char in _m:
                     _kind_idx = config.bond_kind.index(char)
                     break
-        # 使用聚类方法优化近邻查找
         if _kind_idx == -1:
             neighbor_finder = config.total_neighbor
         else:
@@ -130,6 +73,10 @@ def entity_linker_with_use(title, title_tags, article):
         return [], config.names[config.cluster_to_id[_kind_idx][idx[0][0]]][:-1], distance
 
     def _get_backup(_block):
+        """
+        :param _block: 债券要素块
+        :return: 将简称映射为全称后的债券mention
+        """
         _backup = None
         if '发债方' in _block['tags']:
             idx = _block['tags'].index('发债方')
@@ -161,7 +108,7 @@ def entity_linker_with_use(title, title_tags, article):
     article_elements['期数'] = set()
     article_elements['债券类型'] = set()
     for para, para_tags in article:
-        _blocks, article_elements = process_articles(para, para_tags, article_elements)
+        _blocks, article_elements = process_paragraph(para, para_tags, article_elements)
         article_blocks += _blocks
     article_mentions, article_kinds, _ = get_mentions(article_blocks)
     assert (len(article_mentions) == len(article_kinds))
@@ -171,6 +118,7 @@ def entity_linker_with_use(title, title_tags, article):
         article_entity_set.append(predict)
         article_scores.append(score)
     bonds_in_article = list(set(article_entity_set))
+    # 这一步是为了保证去重后顺序不变
     bonds_in_article.sort(key=article_entity_set.index)
     for title_mention, title_kind, is_miss, title_block in \
             zip(title_mentions, title_kinds, title_missing, title_blocks):
@@ -178,8 +126,7 @@ def entity_linker_with_use(title, title_tags, article):
         candidates = []
         scores = []
         if is_miss:
-            # 使用正文提及的债券
-            # 由于补年份和期数的目前只能处理单个债券，因此有多只债券的放在这里处理
+            # 使用正文提及的债券，并保证发债方、年份、期数、债券类型一致
             if len(bonds_in_article) > 0 and ('年份' not in title_block['tags'] or '期数' not in title_block['tags']) \
                     and '资产支持' not in title_kind and '资产证券化' not in title_kind and '专项计划' not in title_kind:
                 for bond in bonds_in_article:
@@ -199,7 +146,7 @@ def entity_linker_with_use(title, title_tags, article):
                     if flag:
                         linking_result.append(bond)
                 if len(linking_result) == 0:
-                    linking_result.append(NIL)
+                    linking_result.append('')
                     candidates.append([])
                     scores.append(0)
             # 补全要素
@@ -209,7 +156,7 @@ def entity_linker_with_use(title, title_tags, article):
                     pad_mention = ''
                     for ele in block['elements']:
                         pad_mention += ele
-                    print('pad mention:', pad_mention)
+                    # print('pad mention:', pad_mention)
                     _candi, predict, score = _predict(pad_mention, title_kind, _get_backup(block))
                     linking_result.append(predict)
                     candidates.append(_candi)

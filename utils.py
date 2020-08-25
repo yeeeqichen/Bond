@@ -16,6 +16,11 @@ reverse_digit = ['#', '一', '二', '三', '四', '五', '六', '七', '八', '�
 
 
 def process_input(_input):
+    """
+    todo:这里采取的是将前两段作为标题，上线后要改成标题
+    :param _input: 文章识别的结果
+    :return: 标题，标题的标签，以及正文（以段落形式表示：[(para, para_tags),...])
+    """
     title = ''
     article = []
     title_tags = []
@@ -46,10 +51,16 @@ def process_input(_input):
     return title, title_tags, article
 
 
-def process_articles(article, article_tags, elements):
-    if article is None:
+def process_paragraph(paragraph, paragraph_tags, elements):
+    """
+    :param paragraph: 段落的text
+    :param paragraph_tags: 段落的tags
+    :param elements: 文章内的要素
+    :return:
+    """
+    if paragraph is None:
         return [], dict()
-    temp_blocks = merge_elements(article, article_tags)
+    temp_blocks = merge_elements(paragraph, paragraph_tags)
     article_blocks = []
     for block in temp_blocks:
         if '年份' in block['tags'] and '期数' in block['tags'] and '发债方' in block['tags']:
@@ -85,7 +96,6 @@ def get_mentions(_blocks):
                 _missing_element.append(False)
         else:
             _missing_element.append(False)
-        # assert(len(block['elements']) == len(block['tags']))
         for ele, kind in zip(block['elements'], block['tags']):
             mention += ele
             if kind == '债券类型':
@@ -154,7 +164,6 @@ def merge_elements(text, tags):
     :return: 文本中的债券，以{'elements':['11', '青岛', '债', '01'], 'tags':['年份', '发债主体','债券类型', '期数']}形式表现
     """
     # 将形如 2015-2018年度 001-008期 第一期至第二十期 展开为多只债券
-    # todo：是不是要将展开后的一组债券名与展开前做一下对应
     def _decode_range():
         nonlocal blocks
         flag = 0
@@ -329,6 +338,7 @@ def merge_elements(text, tags):
     return blocks
 
 
+# 暴力方法，已弃用
 def get_candidates(mention_embedding, kind_idx):
     """
     :param mention_embedding:每个mention的embedding
@@ -355,4 +365,73 @@ def get_candidates(mention_embedding, kind_idx):
         # 返回索引以及对应的相似度得分
     return top_n
 
+
+def pad_element(block, article_elements, mention):
+    """
+    :param block: 待补全的债券的要素块
+    :param article_elements: 正文中出现的债券要素
+    :param mention: 待补全的债券mention
+    :return: 补全后的债券要素块（可能有多个）
+    """
+    results = []
+    new_block = dict(block)
+    if '期数' not in block['tags'] and len(article_elements['期数']) > 0:
+        num = ""
+        for _n in list(article_elements['期数']):
+            if '期' in _n:
+                num += _n
+                break
+        if len(num) > 0:
+            new_block['tags'].insert(0, '期数')
+            new_block['elements'].insert(0, num)
+    if '年份' not in block['tags'] and len(article_elements['年份']) > 0:
+        year = sorted(list(article_elements['年份']), key=lambda x: len(x))[0]
+        if len(year) < 4:
+            year = '20' + year
+        if '年' not in year:
+            year += '年'
+        new_block['tags'].insert(0, '年份')
+        new_block['elements'].insert(0, year)
+    if '发债方' not in block['tags'] and len(article_elements['发债方']) > 0:
+        company = sorted(list(article_elements['发债方']), key=lambda x: len(x), reverse=True)[0]
+        new_block['tags'].insert(0, '发债方')
+        new_block['elements'].insert(0, company)
+    if '修饰语' not in block['tags'] and len(article_elements['修饰语']) > 0:
+        for dec in list(article_elements['修饰语']):
+            if '优' not in dec and '次' not in dec:
+                new_block['tags'].append('修饰语')
+                new_block['elements'].append(dec)
+                break
+    if '资产证券化' in mention or '资产支持' in mention or '专项计划' in mention:
+        flag = False
+        pad = False
+        for ele, tag in zip(block['elements'], block['tags']):
+            if tag == '修饰语' and ('优' in ele or '次' in ele):
+                flag = True
+                break
+        if not flag:
+            _buffer = []
+            for ele in list(article_elements['修饰语']):
+                if '优先' in ele or '次' in ele:
+                    pad = True
+                    _block = dict(new_block)
+                    _block['tags'].append('修饰语')
+                    _block['elements'].append(ele)
+                    if '资产支持证券' not in mention:
+                        _block['tags'].append('债券类型')
+                        _block['elements'].append('资产支持证券')
+                    _cur = ''
+                    for e in _block['elements']:
+                        _cur += e
+                    if _cur not in _buffer:
+                        results.append(_block)
+                        _buffer.append(_cur)
+            # 有可能正文中也没有优先级这一要素
+            if not pad:
+                results.append(new_block)
+        else:
+            results.append(new_block)
+    else:
+        results.append(new_block)
+    return results
 

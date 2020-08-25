@@ -11,11 +11,14 @@ import numpy
 import json
 import os
 import time
-from sklearn.neighbors import BallTree, KDTree
+from sklearn.neighbors import KDTree
 # 加载use模型
 
 
 class Config:
+    """
+    该类用于实例化config对象，为项目提供各类超参以及数据
+    """
     def __init__(self):
         self.folder_path = '/data/IE/yqc/bond'
         self.top_k = 10
@@ -48,6 +51,10 @@ class Config:
         print('use_USE: ', self.use_USE)
 
     def clustering(self):
+        """
+        该函数用于将债券名库按照债券类型进行划分，并在每个子集内建立KD-Tree用于加速近邻寻找
+        :return: None
+        """
         print('clustering...')
         print('cur_time: ', time.ctime(time.time()))
         for idx1, short in enumerate(self.short_names):
