@@ -101,8 +101,13 @@ elif mode == 'train':
         for r in article_result:
             print(r)
 elif mode == 'dev':
-    with open('/data/IE/yqc/bond/bond_arg_ner_res/AN201609020017473335.pdf.txt') as f:
-        file = json.loads(f.read())
+    files = []
+    for f in os.listdir('/data/IE/yqc/bond/res_news'):
+        files.append(f)
+        random.shuffle(files)
+    for f in files[:100]:
+        with open('/data/IE/yqc/bond/res_news' + '/' + f) as q:
+            file = json.loads(q.read())
         title_result, article_result, title, article = link(file)
         print('*' * 80)
         print(title)

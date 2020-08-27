@@ -131,16 +131,16 @@ def entity_linker_with_use(title, title_tags, article):
                     and '资产支持' not in title_kind and '资产证券化' not in title_kind and '专项计划' not in title_kind:
                 for bond in bonds_in_article:
                     flag = True
-                    if '发债方' in title_block['tags'] and \
+                    if flag and '发债方' in title_block['tags'] and \
                             title_block['elements'][title_block['tags'].index('发债方')] not in bond:
                         flag = False
-                    if '年份' in title_block['tags'] and \
+                    if flag and '年份' in title_block['tags'] and \
                             title_block['elements'][title_block['tags'].index('年份')] not in bond:
                         flag = False
-                    if '期数' in title_block['tags'] and \
+                    if flag and '期数' in title_block['tags'] and \
                             title_block['elements'][title_block['tags'].index('期数')] not in bond:
                         flag = False
-                    if '债券类型' in title_block['tags'] and \
+                    if flag and '债券类型' in title_block['tags'] and \
                             title_block['elements'][title_block['tags'].index('债券类型')] not in bond:
                         flag = False
                     if flag:
@@ -166,7 +166,7 @@ def entity_linker_with_use(title, title_tags, article):
             linking_result.append(predict)
             candidates.append(_candi)
             scores.append(score)
-        title_entity_set.append(linking_result)
+        title_entity_set.append(list(set(linking_result)))
         title_candidate_set.append(candidates)
         title_scores.append(scores)
     return title_mentions, title_candidate_set, title_entity_set, title_scores, \
@@ -291,7 +291,7 @@ def link(_input):
         link_func = entity_linker_with_use
     else:
         link_func = entity_linker_with_elements
-    title, title_tags, article = process_input(_input)
+    title, title_tags, article = process_input(_input, config.is_news)
     title_mentions, _, title_entities, title_scores, article_mentions, _, article_entities, article_scores = \
         link_func(title, title_tags, article)
     title_result = []

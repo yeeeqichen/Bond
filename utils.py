@@ -15,9 +15,9 @@ numbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '一', '二', '三'
 reverse_digit = ['#', '一', '二', '三', '四', '五', '六', '七', '八', '九']
 
 
-def process_input(_input):
+def process_input(_input, is_news):
     """
-    todo:这里采取的是将前两段作为标题，上线后要改成标题
+    todo:这里采取的是将前两段/前两句作为标题，上线后要改成标题
     :param _input: 文章识别的结果
     :return: 标题，标题的标签，以及正文（以段落形式表示：[(para, para_tags),...])
     """
@@ -27,25 +27,38 @@ def process_input(_input):
     cur_para = 2
     para = ''
     para_tags = []
-    for obj in _input:
-        if obj['type'] != 'text':
-            continue
-        if obj['paragraph'] == 'title':
-            continue
-        if int(obj['paragraph']) < 2:
-            title += obj['text']
-            title_tags += obj['bond_arg']
-        else:
-            if int(obj['paragraph']) == cur_para:
-                para += obj['text']
-                para_tags += obj['bond_arg']
+    title_cnt = 0
+    if is_news:
+        for obj in _input:
+            if obj['type'] != 'text' or obj['paragraph'] == 'title':
+                continue
+            if title_cnt < 2:
+                title += obj['text']
+                title_tags += obj['bond_arg']
+                title_cnt += 1
             else:
-                article.append((para, para_tags))
-                cur_para = int(obj['paragraph'])
-                para = ''
-                para_tags = []
                 para += obj['text']
                 para_tags += obj['bond_arg']
+    else:
+        for obj in _input:
+            if obj['type'] != 'text':
+                continue
+            if obj['paragraph'] == 'title':
+                continue
+            if int(obj['paragraph']) < 2:
+                title += obj['text']
+                title_tags += obj['bond_arg']
+            else:
+                if int(obj['paragraph']) == cur_para:
+                    para += obj['text']
+                    para_tags += obj['bond_arg']
+                else:
+                    article.append((para, para_tags))
+                    cur_para = int(obj['paragraph'])
+                    para = ''
+                    para_tags = []
+                    para += obj['text']
+                    para_tags += obj['bond_arg']
     if len(para) > 0:
         article.append((para, para_tags))
     return title, title_tags, article
@@ -192,14 +205,14 @@ def merge_elements(text, tags):
                             if j == -1:
                                 j = span.find('~')
                         i2 = j - 1
-                        while span[i2] not in numbers:
+                        while i2 > 0 and span[i2] not in numbers:
                             i2 -= 1
                         # k2、k1表示后一个数字的范围
                         k1 = len(span) - 1
-                        while span[k1] not in numbers:
+                        while k1 > j and span[k1] not in numbers:
                             k1 -= 1
                         k2 = j + 1
-                        while span[k2] not in numbers:
+                        while k2 < len(span) and span[k2] not in numbers:
                             k2 += 1
 
                         # head为前缀、begin为第一个数字、end为第二个数字、tail是后缀
@@ -214,8 +227,14 @@ def merge_elements(text, tags):
                             num1 = _trans(begin)
                             num2 = _trans(end)
                         else:
-                            num1 = int(begin)
-                            num2 = int(end)
+                            if begin == '':
+                                num1 = 0
+                            else:
+                                num1 = int(begin)
+                            if end == '':
+                                num2 = 1
+                            else:
+                                num2 = int(end)
                         length = len(begin)
                         # 将范围进行展开
                         for y in range(num1 + 1, num2 + 1):
