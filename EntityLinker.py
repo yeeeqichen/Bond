@@ -46,9 +46,7 @@ def entity_linker_with_use(title, title_tags, article):
                     _idx = new_idx
             return _distance, _idx
 
-        _flag = False
-        if '资产支持证券' in _m:
-            _flag = True
+        _flag = '资产支持证券' in _m
         _candidates = []
         if _k in config.bond_kind:
             _kind_idx = config.bond_kind.index(_k)
@@ -82,11 +80,11 @@ def entity_linker_with_use(title, title_tags, article):
             idx = _block['tags'].index('发债方')
             if _block['elements'][idx] in config.map_table:
                 _backup = ''
-                for i, ele in enumerate(_block['elements']):
+                for i, e in enumerate(_block['elements']):
                     if i == idx:
-                        _backup += config.map_table[ele]
+                        _backup += config.map_table[e]
                     else:
-                        _backup += ele
+                        _backup += e
         return _backup
     # 目前按照名称的相似度选择链接对象
 
@@ -99,7 +97,7 @@ def entity_linker_with_use(title, title_tags, article):
     title_blocks = merge_elements(title, title_tags)
     title_mentions, title_kinds, title_missing = get_mentions(title_blocks)
     assert (len(title_mentions) == len(title_kinds))
-    assert(len(title_kinds) == len(title_missing))
+    assert (len(title_kinds) == len(title_missing))
     article_blocks = []
     article_elements = dict()
     article_elements['年份'] = set()
@@ -111,7 +109,10 @@ def entity_linker_with_use(title, title_tags, article):
         _blocks, article_elements = process_paragraph(para, para_tags, article_elements)
         article_blocks += _blocks
     article_mentions, article_kinds, _ = get_mentions(article_blocks)
-    assert (len(article_mentions) == len(article_kinds))
+    if len(article_mentions) != len(article_kinds):
+        print(article_mentions, len(article_mentions))
+        print(article_kinds, len(article_kinds))
+        raise Exception('error!')
     for article_mention, article_kind, article_block in zip(article_mentions, article_kinds, article_blocks):
         _candi, predict, score = _predict(article_mention, article_kind, _get_backup(article_block))
         article_candidate_set.append(_candi)
@@ -291,7 +292,7 @@ def link(_input):
         link_func = entity_linker_with_use
     else:
         link_func = entity_linker_with_elements
-    title, title_tags, article = process_input(_input, config.is_news)
+    title, title_tags, article = process_input(_input)
     title_mentions, _, title_entities, title_scores, article_mentions, _, article_entities, article_scores = \
         link_func(title, title_tags, article)
     title_result = []

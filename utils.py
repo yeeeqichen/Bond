@@ -10,12 +10,13 @@
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from Config import config
+import copy
 digit = {'一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9}
 numbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十']
 reverse_digit = ['#', '一', '二', '三', '四', '五', '六', '七', '八', '九']
 
 
-def process_input(_input, is_news):
+def process_input(_input):
     """
     todo:这里采取的是将前两段/前两句作为标题，上线后要改成标题
     :param _input: 文章识别的结果
@@ -28,7 +29,7 @@ def process_input(_input, is_news):
     para = ''
     para_tags = []
     title_cnt = 0
-    if is_news:
+    if config.is_news:
         for obj in _input:
             if obj['type'] != 'text' or obj['paragraph'] == 'title':
                 continue
@@ -41,9 +42,7 @@ def process_input(_input, is_news):
                 para_tags += obj['bond_arg']
     else:
         for obj in _input:
-            if obj['type'] != 'text':
-                continue
-            if obj['paragraph'] == 'title':
+            if obj['type'] != 'text' or obj['paragraph'] == 'title':
                 continue
             if int(obj['paragraph']) < 2:
                 title += obj['text']
@@ -78,8 +77,8 @@ def process_paragraph(paragraph, paragraph_tags, elements):
     for block in temp_blocks:
         if '年份' in block['tags'] and '期数' in block['tags'] and '发债方' in block['tags']:
             article_blocks.append(block)
-        for idx, tag in enumerate(block['tags']):
-            elements[tag].add(block['elements'][idx])
+        for ele, tag in zip(block['elements'], block['tags']):
+            elements[tag].add(ele)
     return article_blocks, elements
 
 
@@ -111,12 +110,11 @@ def get_mentions(_blocks):
             _missing_element.append(False)
         for ele, kind in zip(block['elements'], block['tags']):
             mention += ele
-            if kind == '债券类型':
-                _bond_kinds.append(ele)
-                flag = 1
         _mentions.append(mention)
         # 考虑到可能出现缩写里面将债券类型（字母）标错，这里抢救一下
-        if flag == 0:
+        if '债券类型' in block['tags']:
+            _bond_kinds.append(block['elements'][block['tags'].index('债券类型')])
+        else:
             for k in config.bond_kind:
                 if k in mention:
                     _bond_kinds.append(k)
@@ -133,10 +131,16 @@ def _trans(s):
     if s:
         idx_q, idx_b, idx_s = s.find('千'), s.find('百'), s.find('十')
         if idx_q != -1:
+            if s[idx_q - 1:idx_q] not in digit:
+                return 0
             num += digit[s[idx_q - 1:idx_q]] * 1000
         if idx_b != -1:
+            if s[idx_b - 1:idx_b] not in digit:
+                return 0
             num += digit[s[idx_b - 1:idx_b]] * 100
         if idx_s != -1:
+            if s[idx_s - 1:idx_s] not in digit:
+                return 0
             # 十前忽略一的处理
             num += digit.get(s[idx_s - 1:idx_s], 1) * 10
         if s[-1] in digit:
@@ -146,6 +150,7 @@ def _trans(s):
 
 # 将数字转中文
 def _reverse_trans(num):
+    assert isinstance(num, int), 'type mismatch!'
     s = ''
     temp = []
     while num > 0:
@@ -192,7 +197,7 @@ def merge_elements(text, tags):
                         # 下面计算出各个元素的范围
                         # i1、i2表示前一个数字的范围
                         i1 = 0
-                        while span[i1] not in numbers:
+                        while i1 < len(span) and span[i1] not in numbers:
                             i1 += 1
                         if span[i1] not in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']:
                             chinese = True
@@ -214,7 +219,8 @@ def merge_elements(text, tags):
                         k2 = j + 1
                         while k2 < len(span) and span[k2] not in numbers:
                             k2 += 1
-
+                        if i1 >= i2 or k2 >= k1:
+                            break
                         # head为前缀、begin为第一个数字、end为第二个数字、tail是后缀
                         head = span[:i1]
                         begin = span[i1:i2 + 1]
@@ -238,17 +244,13 @@ def merge_elements(text, tags):
                         length = len(begin)
                         # 将范围进行展开
                         for y in range(num1 + 1, num2 + 1):
-                            temp = dict()
-                            temp['elements'] = []
-                            for e in blocks[idx1]['elements']:
-                                temp['elements'].append(e)
-                            temp['tags'] = blocks[idx1]['tags']
+                            _temp = dict(blocks[idx1])
                             # 根据需要转化为中文表示，例如第一期
                             if chinese:
-                                temp['elements'][idx2] = head + _reverse_trans(y) + tail
+                                _temp['elements'][idx2] = head + _reverse_trans(y) + tail
                             else:
-                                temp['elements'][idx2] = head + str(y).zfill(length) + tail
-                            blocks.append(temp)
+                                _temp['elements'][idx2] = head + str(y).zfill(length) + tail
+                            blocks.append(_temp)
                     # 处理第一期和第二期，第一期与第二期，2019年和2020年这样的情况
                     elif '和' in blocks[idx1]['elements'][idx2] or '与' in blocks[idx1]['elements'][idx2]:
                         span = blocks[idx1]['elements'][idx2]
@@ -258,13 +260,9 @@ def merge_elements(text, tags):
                         fir = span[:j]
                         sec = span[j + 1:]
                         blocks[idx1]['elements'][idx2] = fir
-                        temp = dict()
-                        temp['elements'] = []
-                        temp['tags'] = blocks[idx1]['tags']
-                        for e in blocks[idx1]['elements']:
-                            temp['elements'].append(e)
-                        temp['elements'][idx2] = sec
-                        blocks.append(temp)
+                        _temp = dict(blocks[idx1])
+                        _temp['elements'][idx2] = sec
+                        blocks.append(_temp)
 
         return flag == 1
 
@@ -292,14 +290,9 @@ def merge_elements(text, tags):
                 # 对应于三个及三个以上并列的情况
                 if (tag == '期数' and last_tag == '期数') or (tag == '年份' and last_tag == '年份') or \
                         (tag == '发债方' and last_tag == '发债方') or (tag == '债券类型' and last_tag == '债券类型'):
-                    dic = dict()
-                    dic['elements'] = []
-                    dic['tags'] = []
-                    for i in range(len(temp['tags']) - 1):
-                        dic['elements'].append(temp['elements'][i])
-                        dic['tags'].append(temp['tags'][i])
-                    dic['elements'].append(ele)
-                    dic['tags'].append(tag)
+                    dic = copy.deepcopy(temp)
+                    dic['elements'][-1] = ele
+                    dic['tags'][-1] = tag
                     queue.append(dic)
                 # 新的债券名的开始
                 elif tag != '修饰语' and tag in temp['tags']:
@@ -324,14 +317,9 @@ def merge_elements(text, tags):
                     special_mode = True
                     queue.clear()
                     queue.append(block)
-                    dic = dict()
-                    dic['elements'] = []
-                    dic['tags'] = []
-                    for i in range(len(block['tags']) - 1):
-                        dic['elements'].append(block['elements'][i])
-                        dic['tags'].append(block['tags'][i])
-                    dic['elements'].append(ele)
-                    dic['tags'].append(tag)
+                    dic = copy.deepcopy(block)
+                    dic['elements'][-1] = ele
+                    dic['tags'][-1] = tag
                     queue.append(dic)
                 # 新的债券名的开始
                 elif tag != '修饰语' and tag in block['tags']:
@@ -393,14 +381,14 @@ def pad_element(block, article_elements, mention):
     :return: 补全后的债券要素块（可能有多个）
     """
     results = []
-    new_block = dict(block)
+    new_block = copy.deepcopy(block)
     if '期数' not in block['tags'] and len(article_elements['期数']) > 0:
-        num = ""
+        num = None
         for _n in list(article_elements['期数']):
             if '期' in _n:
-                num += _n
+                num = _n
                 break
-        if len(num) > 0:
+        if num is not None:
             new_block['tags'].insert(0, '期数')
             new_block['elements'].insert(0, num)
     if '年份' not in block['tags'] and len(article_elements['年份']) > 0:
@@ -433,18 +421,13 @@ def pad_element(block, article_elements, mention):
             for ele in list(article_elements['修饰语']):
                 if '优先' in ele or '次' in ele:
                     pad = True
-                    _block = dict(new_block)
+                    _block = copy.deepcopy(new_block)
                     _block['tags'].append('修饰语')
                     _block['elements'].append(ele)
                     if '资产支持证券' not in mention:
                         _block['tags'].append('债券类型')
                         _block['elements'].append('资产支持证券')
-                    _cur = ''
-                    for e in _block['elements']:
-                        _cur += e
-                    if _cur not in _buffer:
-                        results.append(_block)
-                        _buffer.append(_cur)
+                    results.append(_block)
             # 有可能正文中也没有优先级这一要素
             if not pad:
                 results.append(new_block)

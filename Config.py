@@ -48,8 +48,9 @@ class Config:
         self.cluster_to_id = [[] for _ in range(len(self.bond_kind))]
         self.full_to_id = []
         self.use_USE = True
-        self.is_news = True
+        self.is_news = False
         print('use_USE: ', self.use_USE)
+        print('is_news: ', self.is_news)
 
     def clustering(self):
         """
