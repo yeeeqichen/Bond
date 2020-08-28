@@ -12,6 +12,8 @@ import json
 import os
 import time
 from sklearn.neighbors import KDTree
+from sklearn.decomposition import PCA
+
 # 加载use模型
 
 
@@ -42,14 +44,19 @@ class Config:
         self.short_embeddings = []
         self.thresh_hold = 0.72
         self.bond_clusters = [[] for _ in range(len(self.bond_kind))]
+        self.reduced_bond_clusters = []
         self.neighbor_in_cluster = []
+        self.pca_in_cluster = []
+        self.pca = PCA(n_components=50)
         self.total_neighbor = None
         # 这两个list存储到kb索引的映射关系
         self.cluster_to_id = [[] for _ in range(len(self.bond_kind))]
         self.full_to_id = []
         self.use_USE = True
         self.is_news = False
+        self.use_PCA = False
         print('use_USE: ', self.use_USE)
+        print('use_PCA: ', self.use_PCA)
         print('is_news: ', self.is_news)
 
     def clustering(self):
@@ -73,11 +80,24 @@ class Config:
                     break
         for cluster in self.bond_clusters:
             if len(cluster) == 0:
+                self.pca_in_cluster.append(None)
                 self.neighbor_in_cluster.append(None)
+                self.reduced_bond_clusters.append([])
                 continue
             # self.lsh_in_cluster.append(LSHForest(random_state=123).fit(numpy.array(cluster)))
-            self.neighbor_in_cluster.append(KDTree(numpy.array(cluster)))
-        self.total_neighbor = KDTree(numpy.array(self.full_embeddings))
+            array = numpy.array(cluster)
+            if self.use_PCA:
+                self.pca_in_cluster.append(PCA(n_components=50).fit(array))
+                self.reduced_bond_clusters.append(self.pca_in_cluster[-1].transform(array))
+                self.neighbor_in_cluster.append(KDTree(self.reduced_bond_clusters[-1]))
+            else:
+                self.neighbor_in_cluster.append(KDTree(array))
+        array = numpy.array(self.full_embeddings)
+        if self.use_PCA:
+            self.pca.fit(array)
+            self.total_neighbor = KDTree(self.pca.transform(array))
+        else:
+            self.total_neighbor = KDTree(array)
         print('done')
         print('cur_time: ', time.ctime(time.time()))
 

@@ -36,10 +36,17 @@ def entity_linker_with_use(title, title_tags, article):
             """
             nonlocal _flag
             nonlocal neighbor_finder
-            _embed = embed(_mention).numpy()
+            nonlocal pca
+            if config.use_PCA:
+                _embed = pca.transform(embed(_mention).numpy())
+            else:
+                _embed = embed(_mention).numpy()
             _distance, _idx = neighbor_finder.query(_embed, k=1)
             if _flag:
-                new_embed = embed(_mention + '资产支持证券').numpy()
+                if config.use_PCA:
+                    new_embed = pca.transform(embed(_mention + '资产支持证券').numpy())
+                else:
+                    new_embed = embed(_mention + '资产支持证券').numpy()
                 new_distance, new_idx = neighbor_finder.query(new_embed, k=1)
                 if new_distance < _distance:
                     _distance = new_distance
@@ -48,6 +55,7 @@ def entity_linker_with_use(title, title_tags, article):
 
         _flag = '资产支持证券' in _m
         _candidates = []
+        pca = None
         if _k in config.bond_kind:
             _kind_idx = config.bond_kind.index(_k)
         else:
@@ -58,8 +66,12 @@ def entity_linker_with_use(title, title_tags, article):
                     break
         if _kind_idx == -1:
             neighbor_finder = config.total_neighbor
+            if config.use_PCA:
+                pca = config.pca
         else:
             neighbor_finder = config.neighbor_in_cluster[_kind_idx]
+            if config.use_PCA:
+                pca = config.pca_in_cluster[_kind_idx]
         distance, idx = _find_neighbor(_m)
         if _backup is not None:
             backup_distance, backup_idx = _find_neighbor(_backup)
