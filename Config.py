@@ -11,7 +11,7 @@ import numpy
 import json
 import os
 import time
-from sklearn.neighbors import KDTree
+from sklearn.neighbors import KDTree, LSHForest
 from sklearn.decomposition import PCA
 
 # 加载use模型
@@ -57,8 +57,10 @@ class Config:
         self.use_USE = True
         self.is_news = False
         self.use_PCA = True
+        self.use_LSH = False
         print('use_USE: ', self.use_USE)
         print('use_PCA: ', self.use_PCA)
+        print('use_LSH: ', self.use_LSH)
         print('is_news: ', self.is_news)
 
     def clustering(self):
@@ -91,15 +93,27 @@ class Config:
             if self.use_PCA:
                 self.pca_in_cluster.append(PCA(n_components=self.pca_dim).fit(array))
                 self.reduced_bond_clusters.append(self.pca_in_cluster[-1].transform(array))
-                self.neighbor_in_cluster.append(KDTree(self.reduced_bond_clusters[-1]))
+                if self.use_LSH:
+                    self.neighbor_in_cluster.append(LSHForest(random_state=42, radius_cutoff_ratio=0.85).fit(self.reduced_bond_clusters[-1]))
+                else:
+                    self.neighbor_in_cluster.append(KDTree(self.reduced_bond_clusters[-1]))
             else:
-                self.neighbor_in_cluster.append(KDTree(array))
+                if self.use_LSH:
+                    self.neighbor_in_cluster.append(LSHForest(random_state=42, radius_cutoff_ratio=0.85).fit(array))
+                else:
+                    self.neighbor_in_cluster.append(KDTree(array))
         array = numpy.array(self.full_embeddings)
         if self.use_PCA:
             self.pca.fit(array)
-            self.total_neighbor = KDTree(self.pca.transform(array))
+            if self.use_LSH:
+                self.total_neighbor = LSHForest(random_state=42, radius_cutoff_ratio=0.85).fit(self.pca.transform(array))
+            else:
+                self.total_neighbor = KDTree(self.pca.transform(array))
         else:
-            self.total_neighbor = KDTree(array)
+            if self.use_LSH:
+                self.total_neighbor = LSHForest(random_state=42, radius_cutoff_ratio=0.85).fit(array)
+            else:
+                self.total_neighbor = KDTree(array)
         print('done')
         print('cur_time: ', time.ctime(time.time()))
 

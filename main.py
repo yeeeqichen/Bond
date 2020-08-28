@@ -102,11 +102,11 @@ elif mode == 'train':
             print(r)
 elif mode == 'dev':
     files = []
-    for f in os.listdir('/data/IE/yqc/bond/res_news'):
+    for f in os.listdir('/data/IE/yqc/bond/bond_arg_ner_res'):
         files.append(f)
         random.shuffle(files)
-    for f in files[:100]:
-        with open('/data/IE/yqc/bond/res_news' + '/' + f) as q:
+    for f in files:
+        with open('/data/IE/yqc/bond/bond_arg_ner_res/' + f) as q:
             file = json.loads(q.read())
         title_result, article_result, title, article = link(file)
         print('*' * 80)

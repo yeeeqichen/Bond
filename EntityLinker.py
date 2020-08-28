@@ -40,7 +40,10 @@ def entity_linker_with_use(title, title_tags, article):
                     _embed = pca.transform(embed(_m).numpy())
                 else:
                     _embed = embed(_m).numpy()
-                _distance, _idx = neighbor_finder.query(_embed, k=config.knn)
+                if config.use_LSH:
+                    _distance, _idx = neighbor_finder.kneighbors(_embed, n_neighbors=config.knn)
+                else:
+                    _distance, _idx = neighbor_finder.query(_embed, k=config.knn)
                 _candi_set = []
                 for i in _idx[0]:
                     if _kind_idx == -1:
@@ -52,7 +55,7 @@ def entity_linker_with_use(title, title_tags, article):
                 _pos = 0
                 for i, s in enumerate(_sim_matrix[0]):
                     if s > _cur_ans:
-                        _cur_ans = sim
+                        _cur_ans = s
                         _pos = i
                 return _cur_ans, _idx[0][_pos]
             nonlocal _flag
@@ -65,11 +68,7 @@ def entity_linker_with_use(title, title_tags, article):
                 if new_sim > sim:
                     pos = new_pos
                     sim = new_sim
-                # if new_distance < _distance:
-                #     _distance = new_distance
-                #     _idx = new_idx
-            # return _distance, _idx
-            return 1 - sim, pos
+            return sim, pos
 
         _flag = '资产支持证券' in _m
         _candidates = []
@@ -90,15 +89,15 @@ def entity_linker_with_use(title, title_tags, article):
             neighbor_finder = config.neighbor_in_cluster[_kind_idx]
             if config.use_PCA:
                 pca = config.pca_in_cluster[_kind_idx]
-        distance, idx = _find_neighbor(_m)
+        similarity, idx = _find_neighbor(_m)
         if _backup is not None:
-            backup_distance, backup_idx = _find_neighbor(_backup)
-            if backup_distance < distance:
-                distance = backup_distance
+            backup_similarity, backup_idx = _find_neighbor(_backup)
+            if backup_similarity > similarity:
+                similarity = backup_similarity
                 idx = backup_idx
         if _kind_idx == -1:
-            return [], config.names[config.full_to_id[idx]][:-1], distance
-        return [], config.names[config.cluster_to_id[_kind_idx][idx]][:-1], distance
+            return [], config.names[config.full_to_id[idx]][:-1], similarity
+        return [], config.names[config.cluster_to_id[_kind_idx][idx]][:-1], similarity
 
     def _get_backup(_block):
         """
@@ -331,12 +330,12 @@ def link(_input):
         dic = dict()
         dic['mention'] = mention
         dic['entity'] = entity
-        # dic['score'] = score
+        dic['score'] = score
         title_result.append(dic)
     for mention, entity, score in zip(article_mentions, article_entities, article_scores):
         dic = dict()
         dic['mention'] = mention
         dic['entity'] = entity
-        # dic['score'] = score
+        dic['score'] = score
         article_result.append(dic)
     return title_result, article_result, title, article
