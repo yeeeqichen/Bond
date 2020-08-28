@@ -46,15 +46,17 @@ class Config:
         self.bond_clusters = [[] for _ in range(len(self.bond_kind))]
         self.reduced_bond_clusters = []
         self.neighbor_in_cluster = []
+        self.pca_dim = 50
         self.pca_in_cluster = []
-        self.pca = PCA(n_components=50)
+        self.pca = PCA(n_components=self.pca_dim)
         self.total_neighbor = None
         # 这两个list存储到kb索引的映射关系
         self.cluster_to_id = [[] for _ in range(len(self.bond_kind))]
         self.full_to_id = []
+        self.knn = 5
         self.use_USE = True
         self.is_news = False
-        self.use_PCA = False
+        self.use_PCA = True
         print('use_USE: ', self.use_USE)
         print('use_PCA: ', self.use_PCA)
         print('is_news: ', self.is_news)
@@ -87,7 +89,7 @@ class Config:
             # self.lsh_in_cluster.append(LSHForest(random_state=123).fit(numpy.array(cluster)))
             array = numpy.array(cluster)
             if self.use_PCA:
-                self.pca_in_cluster.append(PCA(n_components=50).fit(array))
+                self.pca_in_cluster.append(PCA(n_components=self.pca_dim).fit(array))
                 self.reduced_bond_clusters.append(self.pca_in_cluster[-1].transform(array))
                 self.neighbor_in_cluster.append(KDTree(self.reduced_bond_clusters[-1]))
             else:

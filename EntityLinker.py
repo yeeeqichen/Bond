@@ -9,6 +9,7 @@
 """
 from Config import config
 from utils import merge_elements, get_mentions, process_paragraph, process_input, pad_element
+from sklearn.metrics.pairwise import cosine_similarity
 
 NIL = 'Fail to link: Bond not found in knowledge base!'
 
@@ -34,24 +35,41 @@ def entity_linker_with_use(title, title_tags, article):
             :param _mention: 用于寻找近邻的mention
             :return: 近邻的距离，近邻的索引（债券名库中）
             """
+            def _helper(_m):
+                if config.use_PCA:
+                    _embed = pca.transform(embed(_m).numpy())
+                else:
+                    _embed = embed(_m).numpy()
+                _distance, _idx = neighbor_finder.query(_embed, k=config.knn)
+                _candi_set = []
+                for i in _idx[0]:
+                    if _kind_idx == -1:
+                        _candi_set.append(config.full_embeddings[i])
+                    else:
+                        _candi_set.append(config.bond_clusters[_kind_idx][i])
+                _sim_matrix = cosine_similarity(embed(_mention).numpy(), _candi_set)
+                _cur_ans = -2
+                _pos = 0
+                for i, s in enumerate(_sim_matrix[0]):
+                    if s > _cur_ans:
+                        _cur_ans = sim
+                        _pos = i
+                return _cur_ans, _idx[0][_pos]
             nonlocal _flag
             nonlocal neighbor_finder
             nonlocal pca
-            if config.use_PCA:
-                _embed = pca.transform(embed(_mention).numpy())
-            else:
-                _embed = embed(_mention).numpy()
-            _distance, _idx = neighbor_finder.query(_embed, k=1)
+            nonlocal _kind_idx
+            sim, pos = _helper(_mention)
             if _flag:
-                if config.use_PCA:
-                    new_embed = pca.transform(embed(_mention + '资产支持证券').numpy())
-                else:
-                    new_embed = embed(_mention + '资产支持证券').numpy()
-                new_distance, new_idx = neighbor_finder.query(new_embed, k=1)
-                if new_distance < _distance:
-                    _distance = new_distance
-                    _idx = new_idx
-            return _distance, _idx
+                new_sim, new_pos = _helper(_mention + '资产支持证券')
+                if new_sim > sim:
+                    pos = new_pos
+                    sim = new_sim
+                # if new_distance < _distance:
+                #     _distance = new_distance
+                #     _idx = new_idx
+            # return _distance, _idx
+            return 1 - sim, pos
 
         _flag = '资产支持证券' in _m
         _candidates = []
@@ -79,8 +97,8 @@ def entity_linker_with_use(title, title_tags, article):
                 distance = backup_distance
                 idx = backup_idx
         if _kind_idx == -1:
-            return [], config.names[config.full_to_id[idx[0][0]]][:-1], distance
-        return [], config.names[config.cluster_to_id[_kind_idx][idx[0][0]]][:-1], distance
+            return [], config.names[config.full_to_id[idx]][:-1], distance
+        return [], config.names[config.cluster_to_id[_kind_idx][idx]][:-1], distance
 
     def _get_backup(_block):
         """
