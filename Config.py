@@ -11,6 +11,7 @@ import numpy
 import json
 import os
 import time
+import configparser
 from sklearn.neighbors import KDTree, LSHForest
 from sklearn.decomposition import PCA
 
@@ -22,42 +23,49 @@ class Config:
     该类用于实例化config对象，为项目提供各类超参以及数据
     """
     def __init__(self):
-        self.folder_path = '/data/IE/yqc/bond'
+        c = configparser.ConfigParser()
+        c.read('config.ini')
         self.top_k = 10
-        self.embed_file_full = self.folder_path + '/name_embeddings.json'
-        self.embed_file_short = self.folder_path + '/short_embeddings.json'
-        # self.labeled_text = self.folder_path + '/labeled_text.txt'
-        self.name_file = self.folder_path + '/names.txt'
-        self.full_to_id_file = self.folder_path + '/full_to_id.json'
-        self.map_table_path = self.folder_path + '/map_table.txt'
+        self.embed_file_full = c.get('path', 'embed_file_full')
+        self.embed_file_short = c.get('path', 'embed_file_short')
+        self.name_file = c.get('path', 'name_file')
+        self.full_to_id_file = c.get('path', 'full_to_id')
+        self.map_table_path = c.get('path', 'map_table')
+        self.USE = c.get('path', 'USE')
+
+        self.model_url = c.get('knowledge', 'model_url')
+
+        self.thresh_hold = c.getfloat('hyper_para', 'thresh_hold')
+        self.pca_dim = c.getint('hyper_para', 'pca_dim')
+        self.knn = c.getint('hyper_para', 'knn')
+        self.use_USE = c.getboolean('hyper_para', 'use_USE')
+        self.is_news = c.getboolean('hyper_para', 'is_news')
+        self.use_PCA = c.getboolean('hyper_para', 'use_PCA')
+        self.use_LSH = c.getboolean('hyper_para', 'use_LSH')
+
         self.bond_kind = ['人民币债券', '美元债券', '超短期融资券', '短期融资券', '债务融资工具', '中期票据', '大额存单', '集合票据',
                           '项目收益票据', '资产支持商业票据', '资产支持票据', '资产支持专项计划', '资产证券化', '同业存单', '定期存款', '专项金融债券', '金融债券', '定期债务', '资本补充债券',
                           '资产支持收益凭证', '融资券', '一般债券', '专项债券', '国债', '建设债券', '央行票据', '中央银行票据', '地方政府债券',
                           '政府债券', '置换债券', '专项公司债券', '可转换公司债券', '公司债券', '资本债券', '企业债券', '项目收益债券', '私募债券', '私募债', '集合债券',
                           '资产支持证券', 'PPN', 'ABN', 'MTN', 'SCP', 'CP', 'CD', 'PRN', '专项债', '转2', '债券', '转债', '债', '#']
         self.short_character = ['PPN', 'ABN', 'MTN', 'SCP', 'CP', 'CD', 'PRN']
+        # 初始化一些数据结构
         self.map_table = dict()
         self.names = []
         self.short_names = []
         self.full_names = []
         self.full_embeddings = []
         self.short_embeddings = []
-        self.thresh_hold = 0.72
         self.bond_clusters = [[] for _ in range(len(self.bond_kind))]
         self.reduced_bond_clusters = []
         self.neighbor_in_cluster = []
-        self.pca_dim = 50
         self.pca_in_cluster = []
         self.pca = PCA(n_components=self.pca_dim)
         self.total_neighbor = None
         # 这两个list存储到kb索引的映射关系
         self.cluster_to_id = [[] for _ in range(len(self.bond_kind))]
         self.full_to_id = []
-        self.knn = 5
-        self.use_USE = True
-        self.is_news = False
-        self.use_PCA = True
-        self.use_LSH = False
+
         print('use_USE: ', self.use_USE)
         print('use_PCA: ', self.use_PCA)
         print('use_LSH: ', self.use_LSH)
@@ -124,9 +132,8 @@ if config.use_USE:
     import tensorflow as tf
     import tensorflow_hub as hub
     import tensorflow_text
-    os.environ["TFHUB_CACHE_DIR"] = "//data/IE/windeye_data/tfhub_cache"
-    module_url = "https://hub.tensorflow.google.cn/google/universal-sentence-encoder-multilingual/3"
-    embed = hub.load(module_url)
+    os.environ["TFHUB_CACHE_DIR"] = config.USE
+    embed = hub.load(config.model_url)
     print('loading files...')
     print('cur_time: ', time.ctime(time.time()))
     with open(config.full_to_id_file) as f:

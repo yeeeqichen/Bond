@@ -86,9 +86,14 @@ def entity_linker_with_use(title, title_tags, article):
             if config.use_PCA:
                 pca = config.pca
         else:
-            neighbor_finder = config.neighbor_in_cluster[_kind_idx]
-            if config.use_PCA:
-                pca = config.pca_in_cluster[_kind_idx]
+            if len(config.bond_clusters[_kind_idx]) == 0:
+                neighbor_finder = config.total_neighbor
+                if config.use_PCA:
+                    pca = config.pca
+            else:
+                neighbor_finder = config.neighbor_in_cluster[_kind_idx]
+                if config.use_PCA:
+                    pca = config.pca_in_cluster[_kind_idx]
         similarity, idx = _find_neighbor(_m)
         if _backup is not None:
             backup_similarity, backup_idx = _find_neighbor(_backup)
@@ -96,8 +101,12 @@ def entity_linker_with_use(title, title_tags, article):
                 similarity = backup_similarity
                 idx = backup_idx
         if _kind_idx == -1:
-            return [], config.names[config.full_to_id[idx]][:-1], similarity
-        return [], config.names[config.cluster_to_id[_kind_idx][idx]][:-1], similarity
+            result = config.names[config.full_to_id[idx]][:-1]
+        else:
+            result = config.names[config.cluster_to_id[_kind_idx][idx]][:-1]
+        if similarity < config.thresh_hold:
+            result = 'entity not find in knowledge base!'
+        return [], result, similarity
 
     def _get_backup(_block):
         """
