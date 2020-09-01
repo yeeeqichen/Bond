@@ -38,10 +38,10 @@ class Config:
         self.thresh_hold = c.getfloat('hyper_para', 'thresh_hold')
         self.pca_dim = c.getint('hyper_para', 'pca_dim')
         self.knn = c.getint('hyper_para', 'knn')
-        self.use_USE = c.getboolean('hyper_para', 'use_USE')
-        self.is_news = c.getboolean('hyper_para', 'is_news')
-        self.use_PCA = c.getboolean('hyper_para', 'use_PCA')
-        self.use_LSH = c.getboolean('hyper_para', 'use_LSH')
+        self.use_USE = c.getboolean('option', 'use_USE')
+        self.is_news = c.getboolean('option', 'is_news')
+        self.use_PCA = c.getboolean('option', 'use_PCA')
+        self.use_LSH = c.getboolean('option', 'use_LSH')
 
         self.bond_kind = ['人民币债券', '美元债券', '超短期融资券', '短期融资券', '债务融资工具', '中期票据', '大额存单', '集合票据',
                           '项目收益票据', '资产支持商业票据', '资产支持票据', '资产支持专项计划', '资产证券化', '同业存单', '定期存款', '专项金融债券', '金融债券', '定期债务', '资本补充债券',
