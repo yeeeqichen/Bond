@@ -177,6 +177,7 @@ def _reverse_trans(num):
 
 def merge_elements(text, tags):
     """
+    todo:为每个block记录一个位置信息
     :param text:文本
     :param tags: NER识别的标签
     :return: 文本中的债券，以{'elements':['11', '青岛', '债', '01'], 'tags':['年份', '发债主体','债券类型', '期数']}形式表现
