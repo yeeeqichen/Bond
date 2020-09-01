@@ -162,7 +162,9 @@ if config.use_USE:
             names = line.strip('\n').split(' ')
             if len(names) == 2:
                 if names[1] not in config.map_table:
-                    config.map_table[names[1]] = names[0]
+                    config.map_table[names[1]] = [names[0]]
+                else:
+                    config.map_table[names[1]].append(names[0])
     print('done')
     print('cur_time: ', time.ctime(time.time()))
     config.clustering()

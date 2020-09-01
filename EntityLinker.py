@@ -70,6 +70,7 @@ def entity_linker_with_use(title, title_tags, article):
                     pos = new_pos
                     sim = new_sim
             return sim, pos
+        # 繁体转简体
         _m = Converter('zh-hans').convert(_m)
         _k = Converter('zh-hans').convert(_k)
         _flag = '资产支持证券' in _m
@@ -99,10 +100,11 @@ def entity_linker_with_use(title, title_tags, article):
                     pca = config.pca_in_cluster[_kind_idx]
         similarity, idx = _find_neighbor(_m)
         if _backup is not None:
-            backup_similarity, backup_idx = _find_neighbor(_backup)
-            if backup_similarity > similarity:
-                similarity = backup_similarity
-                idx = backup_idx
+            for ins in _backup:
+                backup_similarity, backup_idx = _find_neighbor(ins)
+                if backup_similarity > similarity:
+                    similarity = backup_similarity
+                    idx = backup_idx
         if _kind_idx == -1:
             result = config.names[config.full_to_id[idx]][:-1]
         else:
@@ -120,12 +122,15 @@ def entity_linker_with_use(title, title_tags, article):
         if '发债方' in _block['tags']:
             idx = _block['tags'].index('发债方')
             if _block['elements'][idx] in config.map_table:
-                _backup = ''
-                for i, e in enumerate(_block['elements']):
-                    if i == idx:
-                        _backup += config.map_table[e]
-                    else:
-                        _backup += e
+                _backup = []
+                for full_name in config.map_table[_block['elements'][idx]]:
+                    temp = ''
+                    for i, e in enumerate(_block['elements']):
+                        if i == idx:
+                            temp += full_name
+                        else:
+                            temp += e
+                    _backup.append(temp)
         return _backup
     # 目前按照名称的相似度选择链接对象
 
